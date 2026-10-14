@@ -1,0 +1,11 @@
+# Politica de cadena de suministro (T06 / ASVS v5.0.0-15.1.x)
+# - No instalar versiones publicadas hace menos de 24 h (mitiga paquetes comprometidos recien publicados)
+# - No ejecutar scripts de instalacion de dependencias salvo que se aprueben explicitamente
+minimumReleaseAge: 1440
+strictDepBuilds: true
+onlyBuiltDependencies: []
+# Las funciones de Netlify empaquetan @netlify/blobs como modulo externo; se elevan solo los
+# paquetes @netlify/* para que sus dependencias se resuelvan dentro del zip de la funcion.
+# El resto del arbol sigue aislado (sin dependencias fantasma).
+publicHoistPattern:
+  - "@netlify/*"

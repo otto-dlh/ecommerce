@@ -2,24 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { request } from "../api.js";
 import { useAuth } from "../state.jsx";
-
-// Trazabilidad amenaza -> control implementado -> requisito ASVS (Tablas 2, 6 y 12 del documento)
-const CONTROLS = [
-  ["T01", "Fuerza bruta / credential stuffing", "Rate limit por IP y por cuenta, scrypt (N=2¹⁷), mensajes genéricos, MFA TOTP con anti-replay, registro de intentos", "6.3.1 · 6.3.3 · 16.3.1"],
-  ["T02", "Manipulación de precio/cupón/estado", "Importes recalculados en la API, cupones solo en servidor, lista blanca de campos, enteros en centavos", "2.2.1 · 2.2.2"],
-  ["T03", "Repudio de cambios", "Bitácora append-only con HMAC por registro: quién, cuándo, antes/después y motivo", "16.3.x · 16.4.2"],
-  ["T04", "IDOR / BOLA", "Verificación de propiedad en cada pedido/dirección, 404 uniforme, permisos por rol en backend", "8.2.1 · 8.2.2 · 8.3.1"],
-  ["T05", "Agotamiento por automatización", "Límite global por IP, límites por endpoint sensible, tamaño máximo de cuerpo (16 KB)", "2.4.1"],
-  ["T06", "Dependencia comprometida", "pnpm con minimumReleaseAge 24 h, scripts de instalación bloqueados, lockfile, pocas dependencias", "15.1.1 · 15.1.2"],
-  ["T07", "XSS en reseñas/productos", "Codificación de salida de React (sin dangerouslySetInnerHTML) + CSP sin 'unsafe-inline'", "1.2.1"],
-  ["T08", "Inyección en búsqueda", "Búsqueda tratada como texto literal y validada; sin construcción dinámica de consultas", "1.2.4"],
-  ["T09", "Webhook de pago falso o repetido", "Firma HMAC-SHA256 + ventana de 5 min + idempotencia por evento + validación de monto y estado", "2.3.1"],
-  ["T10", "Filtración de secretos", "Secretos en variables de entorno de Netlify, claves derivadas por propósito, nada en el repo", "13.3.1"],
-  ["T11", "Pipeline comprometido", "Despliegue desde rama protegida en Netlify, build reproducible con lockfile", "15.x"],
-  ["T12", "Exposición de datos almacenados", "Netlify Blobs privados (sin URL pública), hash de tokens de sesión, logs con datos enmascarados", "14.1.1"],
-  ["T13", "CSRF", "Cookie SameSite=Strict + HttpOnly + Secure, token sincronizado X-CSRF-Token, validación de Origin y Content-Type JSON", "3.3.4 · 3.5.1"],
-  ["T14", "Carrera sobre la última unidad", "Escrituras condicionales por ETag (control optimista) y compensación transaccional", "2.3.3 · 2.3.4"],
-];
+import ControlsMatrix from "./security/ControlsMatrix.jsx";
+import TrustDiagram from "./security/TrustDiagram.jsx";
 
 const json = (body) => ({ method: "POST", body });
 
@@ -182,6 +166,7 @@ export default function Security() {
           Cada prueba lanza un ataque real contra la API desplegada y verifica que sea bloqueado.
           {user ? ` Sesión actual: ${user.email}.` : <> Algunas pruebas requieren <Link to="/login?next=/seguridad">iniciar sesión</Link> (usa cliente@tienda.test).</>}
         </p>
+        <p className="hint">Cada intento bloqueado queda registrado. Con la cuenta de administrador puedes verlos aparecer en tiempo real en <Link to="/admin/auditoria">Administración → Auditoría</Link>.</p>
         <div className="scroll-x"><table className="table">
           <thead><tr><th>Amenaza</th><th>Prueba</th><th>HTTP</th><th>Resultado</th><th></th></tr></thead>
           <tbody>
@@ -201,37 +186,16 @@ export default function Security() {
         </table></div>
       </section>
 
-      <section className="panel" id="controles">
-        <h2>Matriz de controles</h2>
-        <div className="controls">
-          {CONTROLS.map(([id, threat, control, asvs]) => (
-            <article key={id} className="control">
-              <div className="control-head"><span className="control-id">{id}</span><small>ASVS {asvs}</small></div>
-              <h4>{threat}</h4>
-              <p>{control}</p>
-            </article>
-          ))}
-        </div>
+      <section className="panel" id="arquitectura">
+        <h2>Arquitectura y fronteras de confianza</h2>
+        <p className="muted">Toca una frontera (F1–F5) para ver qué datos la cruzan y qué controles la protegen.</p>
+        <TrustDiagram />
       </section>
 
-      <section className="panel" id="arquitectura">
-        <h2>Arquitectura del prototipo</h2>
-        <pre className="diagram">{`Navegador (React SPA)
-   │  HTTPS + HSTS · CSP · cookies HttpOnly/Secure/SameSite=Strict      ← F1
-   ▼
-Netlify CDN / Edge (TLS 1.2+, cabeceras de seguridad)
-   │                                                                  ← F2
-   ├─► /api/*        Función "api"  (reglas de negocio, authN/authZ, validación, auditoría)
-   │                     │                                            ← F3
-   │                     ▼
-   │                Netlify Blobs privados (usuarios, sesiones, pedidos, inventario, auditoría)
-   │
-   └─► /sandbox/pay  Función "sandbox-pay" (proveedor externo simulado)
-                         │  webhook firmado HMAC-SHA256               ← F4
-                         ▼
-                     /api/payments/webhook
-
-Git ──► Netlify Build (pnpm, lockfile, minimumReleaseAge) ──► Deploy      ← F5`}</pre>
+      <section className="panel" id="controles">
+        <h2>Matriz de controles</h2>
+        <p className="muted">Las 14 amenazas del modelo STRIDE explicadas en lenguaje sencillo: qué podría pasar, cómo lo evitamos y dónde comprobarlo.</p>
+        <ControlsMatrix />
       </section>
     </>
   );

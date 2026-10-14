@@ -3,7 +3,6 @@ let csrfToken = null;
 export const setCsrf = (t) => {
   csrfToken = t || null;
 };
-
 export async function request(path, { method = "GET", body, csrf = true, headers = {} } = {}) {
   const init = { method, credentials: "same-origin", headers: { Accept: "application/json", ...headers } };
   if (method !== "GET") {

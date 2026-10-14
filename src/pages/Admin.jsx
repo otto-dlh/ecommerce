@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api.js";
 import { date, money, ROLE_LABEL, STATUS } from "../format.js";
@@ -209,37 +209,152 @@ function Users() {
   );
 }
 
+// Nombres legibles de los eventos de la bitacora (netlify/lib/audit.mjs)
+const ACTION_LABELS = {
+  "auth.login": { ok: "Inicio de sesión", failure: "Inicio de sesión fallido" },
+  "auth.login.mfa_challenge": "Se solicitó el segundo factor",
+  "auth.mfa": { failure: "Código MFA incorrecto" },
+  "auth.register": { ok: "Cuenta registrada", denied: "Registro rechazado" },
+  "auth.logout": "Cierre de sesión",
+  "auth.logout_all": "Cierre de todas las sesiones",
+  "auth.password_change": { ok: "Cambio de contraseña", failure: "Cambio de contraseña fallido" },
+  "auth.mfa_enabled": "MFA activado",
+  "auth.mfa_disabled": { ok: "MFA desactivado", failure: "Intento fallido de desactivar MFA" },
+  "authz.denied": "Acceso denegado",
+  "ratelimit.block": "Bloqueo por exceso de solicitudes",
+  "csrf.origin_rejected": "Origen no permitido",
+  "csrf.token_rejected": "Petición sin token CSRF",
+  "order.created": "Pedido creado",
+  "order.status": "Cambio de estado de pedido",
+  "payment.webhook": { ok: "Pago confirmado por la pasarela", rejected: "Aviso de pago rechazado" },
+  "product.create": "Producto creado",
+  "product.update": "Producto modificado",
+  "stock.adjust": "Ajuste de inventario",
+  "user.update": "Cambio de rol o estado de usuario",
+  "review.hide": "Reseña ocultada",
+};
+
+const eventLabel = (e) => {
+  const l = ACTION_LABELS[e.action];
+  if (!l) return e.action;
+  return typeof l === "string" ? l : l[e.outcome] ?? l.ok ?? e.action;
+};
+const isIncident = (e) => e.outcome !== "ok";
+const COUNTERS = [
+  ["Incidentes", (e) => isIncident(e)],
+  ["Logins fallidos", (e) => e.action === "auth.login" && e.outcome === "failure"],
+  ["Accesos denegados", (e) => e.action === "authz.denied"],
+  ["Bloqueos por límite", (e) => e.action === "ratelimit.block"],
+  ["CSRF bloqueados", (e) => e.action.startsWith("csrf.")],
+  ["Webhooks rechazados", (e) => e.action === "payment.webhook" && e.outcome !== "ok"],
+];
+const POLL_MS = 4000;
+
 function Audit() {
-  const { data, error, load } = useLoad("/api/admin/audit?limit=200");
+  const [entries, setEntries] = useState(null);
+  const [error, setError] = useState("");
+  const [live, setLive] = useState(true);
+  const [onlyIncidents, setOnlyIncidents] = useState(false);
   const [q, setQ] = useState("");
-  if (error) return <p className="alert error">{error}</p>;
-  if (!data) return <p className="muted">Cargando…</p>;
-  const entries = q ? data.entries.filter((e) => JSON.stringify(e).toLowerCase().includes(q.toLowerCase())) : data.entries;
-  const tampered = data.entries.filter((e) => !e.integrity).length;
+  const [fresh, setFresh] = useState(() => new Set());
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const seen = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const d = await api("/api/admin/audit?limit=150");
+      const ids = d.entries.map((e) => e.id);
+      if (seen.current) {
+        const nuevos = ids.filter((id) => !seen.current.has(id));
+        if (nuevos.length) {
+          setFresh(new Set(nuevos));
+          setTimeout(() => setFresh(new Set()), 4000);
+        }
+      }
+      seen.current = new Set(ids);
+      setEntries(d.entries);
+      setUpdatedAt(new Date());
+      setError("");
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Sondeo periodico mientras el modo en vivo este activo y la pestana sea visible
+  useEffect(() => {
+    if (!live) return undefined;
+    const t = setInterval(() => document.visibilityState === "visible" && load(), POLL_MS);
+    return () => clearInterval(t);
+  }, [live, load]);
+
+  if (!entries) return error ? <p className="alert error">{error}</p> : <p className="muted">Cargando…</p>;
+
+  const term = q.trim().toLowerCase();
+  const shown = entries.filter(
+    (e) => (!onlyIncidents || isIncident(e)) && (!term || `${eventLabel(e)} ${JSON.stringify(e)}`.toLowerCase().includes(term))
+  );
+  const tampered = entries.filter((e) => !e.integrity).length;
+
   return (
     <>
-      <div className="row between">
-        <input type="search" placeholder="Filtrar (acción, usuario, resultado)…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button className="btn ghost sm" onClick={load}>Actualizar</button>
+      <div className="audit-head">
+        <div className={`live-indicator ${live ? "on" : ""}`}>
+          <span className="live-dot" />
+          {live ? "En vivo" : "En pausa"}
+          {updatedAt && <small className="muted"> · actualizado {updatedAt.toLocaleTimeString("es-GT")}</small>}
+        </div>
+        <div className="row">
+          <button className="btn ghost sm" onClick={() => setLive(!live)}>{live ? "⏸ Pausar" : "▶ Reanudar"}</button>
+          <button className="btn ghost sm" onClick={load}>↻ Actualizar</button>
+        </div>
       </div>
+
+      <div className="stats audit-stats">
+        {COUNTERS.map(([label, fn]) => {
+          const n = entries.filter(fn).length;
+          return (
+            <div key={label} className={`stat ${n && label !== "Incidentes" ? "alarm" : ""}`}>
+              <span>{label}</span>
+              <b>{n}</b>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="row between audit-filters">
+        <input type="search" placeholder="Buscar (evento, usuario, detalle)…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <label className="check-inline">
+          <input type="checkbox" checked={onlyIncidents} onChange={(e) => setOnlyIncidents(e.target.checked)} /> Solo incidentes
+        </label>
+      </div>
+
       <p className={tampered ? "alert error" : "alert ok"}>
-        {tampered ? `⚠ ${tampered} registros no superan la verificación HMAC` : `✓ Integridad HMAC verificada en ${data.entries.length} registros`}
+        {tampered ? `⚠ ${tampered} registros no superan la verificación HMAC: podrían haber sido alterados` : `✓ Firma HMAC verificada en los ${entries.length} registros más recientes`}
       </p>
+
       <div className="panel scroll">
-        <table className="table small">
-          <thead><tr><th>Fecha</th><th>Acción</th><th>Resultado</th><th>Actor</th><th>IP</th><th>Objetivo / detalle</th><th>HMAC</th></tr></thead>
+        <table className="table small audit-table">
+          <thead><tr><th>Hora</th><th>Evento</th><th>Quién</th><th>IP</th><th>Detalle</th><th>Firma</th></tr></thead>
           <tbody>
-            {entries.map((e) => (
-              <tr key={e.id} className={e.outcome !== "ok" ? "warn-row" : ""}>
-                <td><small>{date(e.at)}</small></td>
-                <td><code>{e.action}</code></td>
-                <td>{e.outcome}</td>
-                <td>{e.actor ? `${e.actor.email} (${e.actor.role})` : "anónimo"}</td>
+            {shown.map((e) => (
+              <tr key={e.id} className={`${isIncident(e) ? "incident" : ""} ${fresh.has(e.id) ? "fresh" : ""}`}>
+                <td title={date(e.at)}><small>{new Date(e.at).toLocaleTimeString("es-GT")}</small></td>
+                <td>
+                  <span className={`sev ${isIncident(e) ? "bad" : "good"}`} />
+                  <b>{eventLabel(e)}</b>
+                  <div><code>{e.action}</code></div>
+                </td>
+                <td>{e.actor ? <>{e.actor.email}<br /><small className="muted">{ROLE_LABEL[e.actor.role] ?? e.actor.role}</small></> : <span className="muted">anónimo</span>}</td>
                 <td><small>{e.ip}</small></td>
                 <td><small>{e.target}{e.details ? ` ${JSON.stringify(e.details)}` : ""}</small></td>
-                <td>{e.integrity ? "✓" : "✗"}</td>
+                <td title={e.integrity ? "Registro íntegro" : "La firma no coincide"}>{e.integrity ? "✓" : "✗"}</td>
               </tr>
             ))}
+            {shown.length === 0 && <tr><td colSpan="6" className="muted">Sin eventos para este filtro.</td></tr>}
           </tbody>
         </table>
       </div>

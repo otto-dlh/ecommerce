@@ -358,6 +358,32 @@ textarea { min-height: 100px; resize: vertical; }
 .lab-row td:first-child { width: 90px; }
 .result-pass { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #dcfce7; color: #15803d; box-shadow: 0 0 0 3px rgb(34 197 94 / 12%); }
 .result-fail { display: inline-flex; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #fef3c7; color: #b45309; }
+.lab-toggle { all: unset; display: block; margin-top: 0.35rem; font-size: 0.78rem; font-weight: 700; color: var(--indigo); cursor: pointer; white-space: nowrap; }
+/* En movil la tabla se desplaza en horizontal: el panel de pasos usa solo el ancho visible y se queda fijo */
+.lab-scroll { container-type: inline-size; }
+.lab-toggle:hover { color: var(--violet); }
+.lab-toggle:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 4px; }
+.lab-row.open td { border-bottom-color: transparent; }
+.table tbody tr.lab-detail:hover { background: none; }
+.lab-detail > td { padding-top: 0; }
+.lab-steps { position: sticky; left: 0.6rem; max-width: calc(100cqi - 1.2rem); display: flex; flex-direction: column; gap: 0.8rem; background: #f8f9fd; border: 1px solid var(--line); border-radius: 16px; padding: 1rem; animation: rise 0.25s both; }
+.lab-goal { margin: 0; font-size: 0.88rem; line-height: 1.5; color: #475569; }
+.lab-goal span, .lab-col h4 { display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.3rem; }
+.lab-goal span { color: var(--muted); }
+.lab-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 0.8rem; }
+.lab-col { background: #fff; border: 1px solid var(--line); border-top: 3px solid; border-radius: 12px; padding: 0.8rem 0.9rem; }
+.lab-col.attack { border-top-color: var(--rose); }
+.lab-col.defense { border-top-color: var(--lime); }
+.lab-col.attack h4 { color: #e11d48; }
+.lab-col.defense h4 { color: #16a34a; }
+.lab-col ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; font-size: 0.86rem; line-height: 1.5; color: #334155; overflow-wrap: anywhere; }
+.lab-steps dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.8rem; margin: 0; font-size: 0.82rem; }
+.lab-steps dt { font-weight: 700; color: var(--muted); }
+.lab-steps dd { margin: 0; overflow-wrap: anywhere; }
+@container (max-width: 480px) {
+  .lab-steps dl { grid-template-columns: 1fr; gap: 0.1rem; }
+  .lab-steps dd + dt { margin-top: 0.4rem; }
+}
 .diagram { background: var(--ink); color: #c7d2fe; padding: 1.2rem; border-radius: 16px; overflow-x: auto; font-size: 0.8rem; line-height: 1.55; margin: 0; }
 
 /* ---------- Pie de pagina ---------- */

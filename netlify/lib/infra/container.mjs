@@ -5,18 +5,21 @@ import { assertImplementsPorts } from "../ports/index.mjs";
 import { createKeyring } from "../security/keyring.mjs";
 import { createEventBus } from "../application/eventBus.mjs";
 import { createServices } from "../application/index.mjs";
-import { seedDemoData } from "../application/seedDemoData.mjs";
+import { seedInitialData } from "../application/seedData.mjs";
 
 const PROVIDERS = {
   // Persistente: PostgreSQL, Storage y Realtime de InsForge
   insforge: {
     load: async (env) => (await import("./insforge/index.mjs")).createInsforgeAdapters(env),
     seedOnStart: false,
+    // Base de datos real: nunca cuentas con contrasenas conocidas
+    demoAccounts: false,
   },
   // Efimero: arranca vacio en cada instancia, por eso se siembra al iniciar
   memory: {
     load: async () => (await import("./memory/index.mjs")).createMemoryAdapters(),
     seedOnStart: true,
+    demoAccounts: true,
   },
 };
 
@@ -35,7 +38,9 @@ export async function createContainer(env = process.env, { logger = console, see
   const repos = assertImplementsPorts(await provider.load(env), providerName);
   const events = createEventBus({ logger });
   const services = createServices({ repos, keyring, events, logger });
-  if (seed ?? provider.seedOnStart) await seedDemoData(repos, env, hashPassword ? { hash: hashPassword } : undefined);
+  if (seed ?? provider.seedOnStart) {
+    await seedInitialData(repos, env, { demoAccounts: provider.demoAccounts, ...(hashPassword && { hash: hashPassword }) });
+  }
   return { providerName, repos, events, services, keyring };
 }
 

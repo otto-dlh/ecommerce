@@ -3,20 +3,22 @@
 //   asi la verificacion no duplica reglas.
 // - Las solicitudes usan ids inexistentes o cuerpos invalidos: un rol autorizado recibe 400/404 (llego a la
 //   validacion) y uno no autorizado recibe 403. Ninguna llamada modifica datos.
+// - Usa las cuentas demo (una por rol), que solo existen con DATA_PROVIDER=memory: la base de datos real
+//   no tiene cuentas con contrasenas conocidas.
 // Uso: pnpm check:permissions [url]   (por defecto http://localhost:8888)
 import { registerRoutes } from "../netlify/lib/http/routes/index.mjs";
 import { can, ROLES } from "../netlify/lib/domain/permissions.mjs";
+import { DEMO_ACCOUNTS } from "../netlify/lib/application/seedData.mjs";
 
 const BASE = process.argv[2] ?? process.env.BASE_URL ?? "http://localhost:8888";
 const PROBE_ID = "no-existe";
 const PROBE_USER_ID = "00000000-0000-4000-8000-000000000000";
 
-const ACCOUNTS = {
-  admin: ["admin@tienda.test", process.env.SEED_PASSWORD_ADMIN || "Admin#Demo2026!"],
-  operador: ["operador@tienda.test", process.env.SEED_PASSWORD_OPERADOR || "Operador#Demo2026!"],
-  auditor: ["auditor@tienda.test", process.env.SEED_PASSWORD_AUDITOR || "Auditor#Demo2026!"],
-  cliente: ["cliente@tienda.test", process.env.SEED_PASSWORD_CLIENTE || "Cliente#Demo2026!"],
-};
+/** Primera cuenta demo de cada rol: [correo, contrasena]. */
+const ACCOUNTS = Object.fromEntries(ROLES.map((role) => {
+  const account = DEMO_ACCOUNTS.find((a) => a.role === role);
+  return [role, [account.email, account.password]];
+}));
 
 /** Rutas protegidas por permiso, leidas del registro real (los controladores no se ejecutan). */
 function protectedRoutes() {

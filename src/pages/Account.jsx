@@ -4,6 +4,7 @@ import { api, setCsrf } from "../api.js";
 import { ROLE_LABEL } from "../format.js";
 import { useAuth } from "../state.jsx";
 import { ListSkeleton } from "../components/Skeleton.jsx";
+import { QrCode } from "../components/QrCode.jsx";
 
 function Mfa() {
   const { user, refresh } = useAuth();
@@ -44,9 +45,12 @@ function Mfa() {
         </form>
       ) : setup ? (
         <form className="form narrow" onSubmit={enable}>
-          <p>Agrega esta clave en Google Authenticator, Microsoft Authenticator o similar (entrada manual):</p>
-          <code className="secret">{setup.secret.match(/.{1,4}/g).join(" ")}</code>
-          <details><summary>URI otpauth</summary><code className="secret small">{setup.otpauth}</code></details>
+          <p>Escanea este código con Google Authenticator, Microsoft Authenticator o una app similar:</p>
+          <QrCode value={setup.otpauth} label="Código QR para agregar la cuenta a tu app autenticadora" />
+          <details>
+            <summary>¿No puedes escanearlo? Ingresa la clave manualmente</summary>
+            <code className="secret">{setup.secret.match(/.{1,4}/g).join(" ")}</code>
+          </details>
           <label>Código generado<input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={6} required /></label>
           <button className="btn">Confirmar y activar</button>
         </form>

@@ -315,13 +315,6 @@ textarea { min-height: 100px; resize: vertical; }
 .feature-list i { font-style: normal; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgb(255 255 255 / 10%); border: 1px solid rgb(255 255 255 / 15%); flex-shrink: 0; }
 .auth-form { padding: 2.4rem; display: flex; flex-direction: column; gap: 1rem; }
 .auth-form h1 { margin: 0; }
-.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.demo-user { display: flex; flex-direction: column; align-items: flex-start; background: #f8f9fd; border: 1.5px solid var(--line); border-radius: 12px; padding: 0.55rem 0.75rem; cursor: pointer; font: inherit; color: var(--text); text-align: left; transition: all 0.15s; }
-.demo-user:hover { border-color: var(--violet); background: #faf8ff; }
-.demo-user b { font-size: 0.85rem; }
-.demo-user span { font-size: 0.74rem; color: var(--muted); }
-.divider { display: flex; align-items: center; gap: 0.7rem; color: var(--muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .secret { display: block; font-size: 1.05rem; letter-spacing: 0.08em; padding: 0.7rem; word-break: break-all; }
 .secret.small { font-size: 0.75rem; letter-spacing: 0; }
 
@@ -455,7 +448,6 @@ textarea { min-height: 100px; resize: vertical; }
   .toolbar, .search { width: 100%; }
   .toolbar select { flex: 1; }
   .ticket { min-width: 0; flex-basis: 100%; }
-  .demo-grid { grid-template-columns: 1fr; }
   .auth-form { padding: 1.5rem; }
 }
 
@@ -658,3 +650,6 @@ label.btn.disabled { opacity: 0.6; pointer-events: none; }
   .alert-toasts { left: 16px; right: 16px; bottom: 16px; width: auto; }
   .alert-panel { position: fixed; left: 16px; right: 16px; top: 76px; width: auto; }
 }
+
+/* Código QR del MFA: siempre sobre fondo blanco y con borde suave para que las apps lo lean bien */
+.qr-code { display: block; width: 200px; height: 200px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }

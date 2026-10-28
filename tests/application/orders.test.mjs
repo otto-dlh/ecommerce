@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { newContainer, loginAs, captureEvents } from "../helpers.mjs";
 import { ConflictError, NotFoundError, ForbiddenError } from "../../netlify/lib/domain/errors.mjs";
-import { DEMO_FOREIGN_ORDER_ID } from "../../netlify/lib/application/seedDemoData.mjs";
+import { DEMO_FOREIGN_ORDER_ID } from "../../netlify/lib/application/seedData.mjs";
 
 const ADDRESS = { name: "Prueba", line1: "Laboratorio 123", city: "Guatemala", phone: "55555555" };
 const buy = (c, ctx, items, extra = {}) => c.services.checkout.placeOrder(ctx, { items, address: ADDRESS, ...extra });

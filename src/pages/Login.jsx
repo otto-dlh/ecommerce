@@ -4,13 +4,6 @@ import { api } from "../api.js";
 import { useAuth } from "../state.jsx";
 import { Brand } from "../components/Brand.jsx";
 
-const DEMO = [
-  ["admin@tienda.test", "Admin#Demo2026!", "Administrador"],
-  ["operador@tienda.test", "Operador#Demo2026!", "Operador"],
-  ["cliente@tienda.test", "Cliente#Demo2026!", "Cliente"],
-  ["cliente2@tienda.test", "Cliente2#Demo2026!", "Cliente 2"],
-];
-
 // Solo se aceptan rutas internas como destino tras el login (evita open redirect)
 const safeNext = (n) => (n && n.startsWith("/") && !n.startsWith("//") ? n : "/");
 
@@ -82,14 +75,6 @@ export default function Login() {
             <button className="btn block lg" disabled={busy}>Verificar</button>
           </form>
         )}
-        <div className="divider">Cuentas de demostración</div>
-        <div className="demo-grid">
-          {DEMO.map(([u, p, r]) => (
-            <button key={u} type="button" className="demo-user" onClick={() => { setEmail(u); setPassword(p); setMfaToken(null); }}>
-              <b>{r}</b><span>{u}</span>
-            </button>
-          ))}
-        </div>
         <p className="hint">Tras 5 intentos fallidos por cuenta en 15 minutos la API responde 429 (T01).</p>
       </div>
     </div>

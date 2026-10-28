@@ -1,7 +1,11 @@
-// Datos demo del prototipo. Idempotente: solo crea lo que falta.
+// Datos iniciales. Idempotente: solo crea lo que falta.
 // Usa unicamente los puertos, asi que funciona igual con cualquier proveedor de datos.
+// - Siempre: categorias, productos, cupones y la cuenta de administrador (contrasena de SEED_PASSWORD_ADMIN).
+// - Solo con `demoAccounts` (proveedor en memoria: desarrollo y pruebas): una cuenta por rol con
+//   contrasena conocida y el pedido ajeno para la prueba IDOR. En la base de datos real nunca se crean.
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "../security/crypto.mjs";
+import * as v from "../domain/validate.mjs";
 
 export const DEMO_FOREIGN_ORDER_ID = "demo-pedido-cliente2";
 
@@ -36,14 +40,16 @@ const COUPONS = [
   { code: "ENVIOGRATIS", label: "Envío gratis", type: "shipping", value: 0, minSubtotal: 0, oncePerUser: false },
 ];
 
-// [rol, correo, nombre, variable de entorno con la contrasena, contrasena demo]
-const USERS = [
-  ["admin", "admin@tienda.test", "Ana Administradora", "SEED_PASSWORD_ADMIN", "Admin#Demo2026!"],
-  ["operador", "operador@tienda.test", "Óscar Operador", "SEED_PASSWORD_OPERADOR", "Operador#Demo2026!"],
-  ["auditor", "auditor@tienda.test", "Aurora Auditora", "SEED_PASSWORD_AUDITOR", "Auditor#Demo2026!"],
-  ["cliente", "cliente@tienda.test", "Carla Cliente", "SEED_PASSWORD_CLIENTE", "Cliente#Demo2026!"],
-  ["cliente", "cliente2@tienda.test", "Carlos Cliente", "SEED_PASSWORD_CLIENTE2", "Cliente2#Demo2026!"],
-];
+const ADMIN = { role: "admin", email: "admin@tienda.test", name: "Ana Administradora" };
+
+/** Solo desarrollo y pruebas (proveedor en memoria): una cuenta por rol con contrasena conocida. */
+export const DEMO_ACCOUNTS = Object.freeze([
+  { ...ADMIN, password: "Admin#Demo2026!" },
+  { role: "operador", email: "operador@tienda.test", name: "Óscar Operador", password: "Operador#Demo2026!" },
+  { role: "auditor", email: "auditor@tienda.test", name: "Aurora Auditora", password: "Auditor#Demo2026!" },
+  { role: "cliente", email: "cliente@tienda.test", name: "Carla Cliente", password: "Cliente#Demo2026!" },
+  { role: "cliente", email: "cliente2@tienda.test", name: "Carlos Cliente", password: "Cliente2#Demo2026!" },
+]);
 
 async function seedCategories({ categories }) {
   for (const [id, name, description, sortOrder] of CATEGORIES) {
@@ -64,23 +70,17 @@ async function seedCoupons({ coupons }) {
   }
 }
 
-async function seedUsers({ users }, env, now, hash) {
-  const ids = {};
-  for (const [role, email, name, envVar, fallback] of USERS) {
-    const existing = await users.findByEmail(email);
-    if (existing) {
-      ids[email] = existing.id;
-      continue;
-    }
-    const user = await users.create({
-      id: randomUUID(), email, name, role, active: true,
-      // Las contrasenas demo se reemplazan con variables de entorno antes de sembrar en produccion
-      passwordHash: await hash(env[envVar] || fallback),
-      mfa: { enabled: false }, mustChangePassword: false, createdAt: now, lastLoginAt: null,
-    });
-    ids[email] = user.id;
-  }
-  return ids;
+/** Crea la cuenta si no existe y devuelve su id. Sin contrasena no se crea nada (falla cerrado). */
+async function ensureUser({ users }, { role, email, name }, password, now, hash) {
+  const existing = await users.findByEmail(email);
+  if (existing) return existing.id;
+  if (!password) throw new Error(`Define SEED_PASSWORD_ADMIN (mínimo 12 caracteres) para crear la cuenta ${email}`);
+  const user = await users.create({
+    id: randomUUID(), email, name, role, active: true,
+    passwordHash: await hash(v.password(password, "SEED_PASSWORD_ADMIN")),
+    mfa: { enabled: false }, mustChangePassword: false, createdAt: now, lastLoginAt: null,
+  });
+  return user.id;
 }
 
 /** Pedido entregado de otro cliente con ID conocido para demostrar la proteccion IDOR (T04). */
@@ -108,14 +108,20 @@ async function seedForeignOrder({ orders }, ownerId, now) {
 
 /**
  * @param {import("../ports/index.mjs").Adapters} repos
- * @param {Record<string, string|undefined>} [env]   contrasenas SEED_PASSWORD_* opcionales
- * @param {{ hash?: (password: string) => Promise<string> }} [options]  inyectable para pruebas rapidas
+ * @param {Record<string, string|undefined>} [env]   SEED_PASSWORD_ADMIN (obligatoria si falta el administrador)
+ * @param {{ hash?: (password: string) => Promise<string>, demoAccounts?: boolean }} [options]
+ *        `hash` inyectable para pruebas rapidas; `demoAccounts` solo para el proveedor en memoria
  */
-export async function seedDemoData(repos, env = {}, { hash = hashPassword } = {}) {
+export async function seedInitialData(repos, env = {}, { hash = hashPassword, demoAccounts = false } = {}) {
   const now = new Date().toISOString();
   await seedCategories(repos);
   await seedProducts(repos, now);
   await seedCoupons(repos);
-  const ids = await seedUsers(repos, env, now, hash);
+  if (!demoAccounts) {
+    await ensureUser(repos, ADMIN, env.SEED_PASSWORD_ADMIN, now, hash);
+    return;
+  }
+  const ids = {};
+  for (const account of DEMO_ACCOUNTS) ids[account.email] = await ensureUser(repos, account, account.password, now, hash);
   await seedForeignOrder(repos, ids["cliente2@tienda.test"], now);
 }

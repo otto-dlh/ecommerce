@@ -59,8 +59,8 @@ function useTests(user, realtime) {
       id: "T04", name: "Leer el pedido de otro cliente (IDOR)",
       goal: "Ver la dirección, el teléfono y las compras de otra persona cambiando el identificador del pedido en la URL (referencia directa insegura a objetos).",
       steps: [
-        ["atacante", "Inicia sesión como `cliente@tienda.test`, una cuenta normal de cliente."],
-        ["atacante", "Pide `GET /api/orders/demo-pedido-cliente2`, un pedido que pertenece a `cliente2@tienda.test`. Equivale a cambiar el número de pedido en la barra de direcciones de «Mis pedidos»."],
+        ["atacante", "Inicia sesión con una cuenta normal de cliente (sirve una recién creada en «Crear cuenta»)."],
+        ["atacante", "Pide `GET /api/orders/demo-pedido-cliente2`, un pedido que pertenece a otra cuenta. Equivale a cambiar el número de pedido en la barra de direcciones de «Mis pedidos»."],
         ["servidor", "Valida la cookie de sesión e identifica al usuario. Sin sesión, se detiene aquí con `401`."],
         ["servidor", "`orders.getForActor` carga el pedido y compara su dueño con el usuario de la sesión: no coincide, y el rol cliente no tiene el permiso `orders:read` (solo operador, auditor y administrador)."],
         ["bitacora", "Registra «Acceso denegado» con el pedido que se intentó ver."],
@@ -71,7 +71,8 @@ function useTests(user, realtime) {
       code: "netlify/lib/application/orderService.mjs · netlify/lib/domain/permissions.mjs",
       run: async () => {
         const r = await request("/api/orders/demo-pedido-cliente2");
-        const legit = user && (user.email === "cliente2@tienda.test" || can(user, "orders:read"));
+        // Legitimo si el pedido es propio o si el rol puede leer pedidos de otros
+        const legit = user && ((r.status === 200 && r.data.order?.userId === user.id) || can(user, "orders:read"));
         if (!user) return { pass: r.status === 401, status: r.status, detail: "Sin sesión: 401" };
         if (legit) return { pass: r.status === 200, status: r.status, detail: "Tu rol/titularidad sí permite verlo (acceso legítimo)" };
         return { pass: r.status === 404, status: r.status, detail: "Respuesta 404 uniforme; el intento quedó en auditoría" };
@@ -195,7 +196,7 @@ function useTests(user, realtime) {
       id: "T01", name: "Fuerza bruta: 6 intentos contra una cuenta",
       goal: "Adivinar la contraseña de una cuenta probando muchas combinaciones (fuerza bruta).",
       steps: [
-        ["lab", "Genera un correo de víctima al azar (`victima-xxxxxx@tienda.test`) para no bloquear las cuentas demo."],
+        ["lab", "Genera un correo de víctima al azar (`victima-xxxxxx@tienda.test`) para no bloquear ninguna cuenta real."],
         ["atacante", "Intentos 1 a 5: envía `POST /api/auth/login` con una contraseña incorrecta distinta cada vez."],
         ["servidor", "En cada intento revisa primero los contadores de la política de acceso (por defecto, en 15 minutos: 5 fallos por IP y cuenta, 20 por cuenta desde cualquier IP y 30 intentos por IP): todavía hay cupo."],
         ["servidor", "Verifica la contraseña con scrypt y falla (si el correo no existe, calcula igual un scrypt ficticio para tardar lo mismo). Suma el fallo a los contadores."],
@@ -339,8 +340,8 @@ function useTests(user, realtime) {
       run: async () => {
         // Cuerpo invalido a proposito: aun con permiso, nada se modifica (la validacion lo rechaza)
         const r = await request("/api/admin/products/gorra/stock", json({ delta: 0, reason: "lab" }));
-        if (!user) return { pass: r.status === 401, status: r.status, detail: "Sin sesión: 401 (inicia sesión como auditor@tienda.test)" };
-        if (can(user, "inventory:write")) return { pass: r.status === 400, status: r.status, detail: "Tu rol sí puede ajustar inventario (legítimo). Prueba con auditor@tienda.test" };
+        if (!user) return { pass: r.status === 401, status: r.status, detail: "Sin sesión: 401 (inicia sesión con una cuenta de rol auditor)" };
+        if (can(user, "inventory:write")) return { pass: r.status === 400, status: r.status, detail: "Tu rol sí puede ajustar inventario (legítimo). Prueba con una cuenta de rol auditor" };
         return { pass: r.status === 403, status: r.status, detail: r.data.error };
       },
     },
@@ -451,7 +452,7 @@ export default function Security() {
         <p className="muted">
           Cada prueba lanza un ataque real contra la API desplegada y verifica que sea bloqueado.
           Abre «Ver pasos» en cualquier prueba para seguir, en orden, lo que hace el atacante y cómo responde la tienda en cada momento.
-          {user ? ` Sesión actual: ${user.email}.` : <> Algunas pruebas requieren <Link to="/login?next=/seguridad">iniciar sesión</Link> (usa cliente@tienda.test).</>}
+          {user ? ` Sesión actual: ${user.email}.` : <> Algunas pruebas requieren <Link to="/login?next=/seguridad">iniciar sesión</Link> con una cuenta de cliente (puedes <Link to="/registro">crear una</Link>).</>}
         </p>
         <p className="hint">Cada intento bloqueado queda registrado. Con la cuenta de administrador puedes verlos aparecer en tiempo real en <Link to="/admin/auditoria">Administración → Auditoría</Link>.</p>
         <div className="scroll-x lab-scroll"><table className="table">

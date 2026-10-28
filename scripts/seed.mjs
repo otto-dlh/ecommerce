@@ -1,5 +1,6 @@
-// Siembra los datos demo en el proveedor configurado (idempotente: solo crea lo que falta).
-// Uso: pnpm seed   (lee .env; en produccion define antes las variables SEED_PASSWORD_*)
+// Siembra los datos iniciales en el proveedor configurado (idempotente: solo crea lo que falta).
+// Uso: pnpm seed   (lee .env). En la base de datos real crea solo el catalogo y el administrador:
+// SEED_PASSWORD_ADMIN es obligatoria si el administrador todavia no existe.
 import { createContainer } from "../netlify/lib/infra/container.mjs";
 
 const container = await createContainer(process.env, { seed: true });

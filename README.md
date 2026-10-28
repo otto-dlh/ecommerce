@@ -34,20 +34,20 @@ Las variables están documentadas en [`.env.example`](.env.example). Cópialo co
 | `VITE_INSFORGE_URL` | Navegador | Misma URL que `INSFORGE_URL`; también se usa para la CSP (`connect-src` e `img-src`) |
 | `VITE_INSFORGE_ANON_KEY` | Navegador | Clave anónima, pública por diseño: solo escucha avisos realtime |
 | `ALLOWED_ORIGINS` | Servidor (opcional) | Orígenes extra permitidos (separados por coma) si usas un dominio adicional |
-| `SEED_PASSWORD_*` | Solo `pnpm seed` (opcional) | Reemplazan las contraseñas demo al sembrar |
+| `SEED_PASSWORD_ADMIN` | Solo `pnpm seed` | Contraseña inicial del administrador. Obligatoria si la base de datos todavía no tiene la cuenta `admin@tienda.test` |
 
 Genera `APP_SECRET` con `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
 
 ### Preparar InsForge (solo la primera vez)
 
-El proyecto ya está vinculado (`.insforge/project.json`, fuera del repositorio) y la base de datos ya tiene el esquema y los datos demo. Para montar uno nuevo:
+El proyecto ya está vinculado (`.insforge/project.json`, fuera del repositorio) y la base de datos ya tiene el esquema, el catálogo y la cuenta de administrador. Para montar uno nuevo:
 
 ```bash
 npx -y @insforge/cli link                               # vincular el proyecto
 npx -y @insforge/cli db migrations up --all             # esquema, RLS, funciones atómicas y canales realtime
 npx -y @insforge/cli config apply --file insforge.toml  # registro de InsForge Auth desactivado
 npx -y @insforge/cli storage create-bucket product-images
-pnpm seed                                               # categorías, productos, cupones y cuentas demo (idempotente)
+pnpm seed                                               # categorías, productos, cupones y administrador (idempotente; pide SEED_PASSWORD_ADMIN)
 ```
 
 `disable_signup = true` es obligatorio: si alguien pudiera registrarse en InsForge Auth obtendría un token `authenticated`. El esquema le quita todos los permisos igualmente, pero así se cierra también esa puerta.
@@ -57,8 +57,8 @@ pnpm seed                                               # categorías, productos
 1. Sube esta carpeta a un repositorio Git (GitHub/GitLab) **privado**.
 2. En Netlify: **Add new site → Import an existing project** y elige el repositorio. `netlify.toml` ya define el build (`pnpm run build`), la carpeta `dist`, las funciones y las cabeceras de seguridad.
 3. Define las variables de la tabla anterior. Las `VITE_*` se leen **al compilar**: si las cambias, vuelve a desplegar.
-4. Despliega. Los datos ya están en InsForge, así que el sitio arranca con el catálogo y las cuentas demo.
-5. **Verificación obligatoria tras el despliegue:** abre `/seguridad`, inicia sesión como `cliente@tienda.test` y pulsa **Ejecutar todas**. Todas las pruebas deben salir como «Bloqueado». Repite con `auditor@tienda.test` para la prueba de solo lectura.
+4. Despliega. Los datos ya están en InsForge, así que el sitio arranca con el catálogo y la cuenta de administrador.
+5. **Verificación obligatoria tras el despliegue:** abre `/seguridad`, inicia sesión con una cuenta de cliente (créala en «Crear cuenta») y pulsa **Ejecutar todas**. Todas las pruebas deben salir como «Bloqueado» u «Omitida». Para la prueba de solo lectura, el administrador puede asignar el rol Auditor a una cuenta desde «Usuarios».
 
 ## Desarrollo local
 
@@ -73,7 +73,7 @@ pnpm serve         # compila y sirve el build como en producción (con la CSP es
 
 - `pnpm dev` ejecuta las funciones de `netlify/functions` dentro del servidor de Vite (`scripts/vite-local-functions.mjs`) y les pasa las variables del `.env`. Se prefiere a `netlify dev` porque su proxy reintenta toda respuesta 403/404 con variantes `.html` (imita al CDN), lo que cambia los códigos HTTP que devuelve la API y vuelve a ejecutar la solicitud. En Netlify las respuestas de las funciones llegan sin cambios.
 - La **Content-Security-Policy** estricta se genera en `dist/_headers` solo al compilar (ver `vite.config.js`). En desarrollo no se aplica porque Vite necesita un script en línea para la recarga en caliente. Para probar con la CSP, usa `pnpm serve`.
-- Para trabajar **sin InsForge**: `DATA_PROVIDER=memory pnpm dev` (en PowerShell: `$env:DATA_PROVIDER="memory"; pnpm dev`). La API arranca con los datos demo en memoria; el realtime no emite avisos.
+- Para trabajar **sin InsForge**: `DATA_PROVIDER=memory pnpm dev` (en PowerShell: `$env:DATA_PROVIDER="memory"; pnpm dev`). La API arranca con el catálogo y una cuenta demo por rol en memoria (ver *Cuentas*); el realtime no emite avisos.
 
 ### Scripts de verificación
 
@@ -81,8 +81,8 @@ pnpm serve         # compila y sirve el build como en producción (con la CSP es
 |---|---|
 | `pnpm test` | Pruebas unitarias del dominio y los servicios, y suite de contrato contra el adaptador en memoria (`node --test`, sin dependencias) |
 | `pnpm test:insforge` | La misma suite de contrato contra InsForge real. **Escribe datos de prueba** (los borra al terminar), pero los registros de auditoría que genera no se pueden borrar desde la API porque la bitácora es *append-only* |
-| `pnpm check:permissions [url]` | Inicia sesión con los 4 roles, llama a cada endpoint de administración y compara el código HTTP con la matriz de `domain/permissions.mjs` (por defecto contra `http://localhost:8888`) |
-| `pnpm seed` | Siembra los datos demo en el proveedor configurado; solo crea lo que falta |
+| `pnpm check:permissions [url]` | Contra un servidor con `DATA_PROVIDER=memory`: inicia sesión con la cuenta demo de cada rol, llama a cada endpoint de administración y compara el código HTTP con la matriz de `domain/permissions.mjs` (por defecto contra `http://localhost:8888`) |
+| `pnpm seed` | Siembra el catálogo, los cupones y el administrador en el proveedor configurado; solo crea lo que falta |
 
 ## Roles
 
@@ -104,15 +104,11 @@ La matriz vive en `netlify/lib/domain/permissions.mjs` y la aplica el pipeline H
 
 Reglas adicionales: nadie cambia su propio rol ni su estado, siempre queda al menos un administrador activo, y cambiar el rol, desactivar una cuenta o restablecer la contraseña cierra todas las sesiones de esa persona al instante.
 
-## Cuentas demo
+## Cuentas
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Administrador | admin@tienda.test | `Admin#Demo2026!` |
-| Operador | operador@tienda.test | `Operador#Demo2026!` |
-| Auditor | auditor@tienda.test | `Auditor#Demo2026!` |
-| Cliente | cliente@tienda.test | `Cliente#Demo2026!` |
-| Cliente 2 | cliente2@tienda.test | `Cliente2#Demo2026!` |
+- **Base de datos real (InsForge):** solo existe el administrador `admin@tienda.test`; su contraseña la define quien administra (`SEED_PASSWORD_ADMIN` en la primera siembra y luego «Mi cuenta → Cambiar contraseña»). Los clientes se registran en «Crear cuenta» y el administrador asigna los roles de personal en «Usuarios». Las cuentas demo que existían están desactivadas (se conserva su historial).
+- **Desarrollo y pruebas (`DATA_PROVIDER=memory`):** se crea una cuenta demo por rol (administrador, operador, auditor y dos clientes) con contraseñas conocidas, definidas en `netlify/lib/application/seedData.mjs`. Nunca se crean en la base de datos real.
+- **MFA:** en «Mi cuenta → Verificación en dos pasos» se escanea un código QR con la app autenticadora (o se ingresa la clave a mano).
 
 Tarjetas de prueba: `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002` (rechazada). Cupones: `BIENVENIDA10`, `QUETZAL50`, `ENVIOGRATIS` (se administran en el panel).
 

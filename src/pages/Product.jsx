@@ -1,11 +1,54 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { date, money } from "../format.js";
 import { useAuth, useCart } from "../state.jsx";
 import { ProductTile } from "./Catalog.jsx";
+import { LoadingRegion, Skeleton, SkeletonText } from "../components/Skeleton.jsx";
+import { useLiveRefresh } from "../realtime/RealtimeProvider.jsx";
 
 const Stars = ({ n }) => <span className="stars" aria-label={`${n} de 5`}>{"★".repeat(n)}{"☆".repeat(5 - n)}</span>;
+
+// Ficha en carga: misma estructura que la ficha real (foto, datos, caja de compra y reseñas)
+function ProductDetailSkeleton() {
+  return (
+    <LoadingRegion label="Cargando producto…">
+      <div className="product-detail" aria-hidden="true">
+        <Skeleton variant="block" className="tile-lg" />
+        <div className="product-info">
+          <Skeleton variant="pill" />
+          <h1><Skeleton variant="title" width={70} /></h1>
+          <p className="lead"><SkeletonText lines={3} /></p>
+          <div className="buy-box">
+            <div className="row between">
+              <Skeleton variant="title" width={30} className="price xl" />
+              <Skeleton variant="pill" />
+            </div>
+            <div className="row nowrap">
+              <Skeleton variant="input" className="qty" />
+              <Skeleton variant="button" size="lg" className="grow" />
+            </div>
+          </div>
+          <ul className="trust-list">
+            {[60, 70, 50].map((w) => <li key={w}><Skeleton inline width={w} /></li>)}
+          </ul>
+        </div>
+      </div>
+      <section className="panel" aria-hidden="true">
+        <h2>Reseñas</h2>
+        <ul className="reviews">
+          {[0, 1].map((i) => (
+            <li key={i}>
+              <div className="row between nowrap"><Skeleton width={30} /><Skeleton width={20} /></div>
+              <p><SkeletonText lines={2} /></p>
+              <Skeleton width={40} className="small" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    </LoadingRegion>
+  );
+}
 
 export default function Product() {
   const { id } = useParams();
@@ -21,14 +64,23 @@ export default function Product() {
 
   const [credit, setCredit] = useState(null);
 
+  const [version, bump] = useReducer((n) => n + 1, 0);
+  useLiveRefresh(["catalog.products", "catalog.stock", "catalog.reviews"], bump, { filter: (p) => (p.productIds ?? [p.productId]).includes(id) });
   useEffect(() => {
     api(`/api/products/${encodeURIComponent(id)}`).then(setData).catch((e) => setError(e.message));
     // Atribucion de la foto (archivo estatico generado por scripts/fetch-stock-photos.mjs)
     fetch("/products/credits.json").then((r) => (r.ok ? r.json() : {})).then((c) => setCredit(c[id] ?? null)).catch(() => {});
-  }, [id]);
+  }, [id, version]);
 
   if (error) return <p className="alert error">{error}</p>;
-  if (!data) return <p className="muted center">Cargando…</p>;
+  if (!data) {
+    return (
+      <>
+        <Link to="/" className="back">← Volver al catálogo</Link>
+        <ProductDetailSkeleton />
+      </>
+    );
+  }
   const { product: p, reviews } = data;
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 

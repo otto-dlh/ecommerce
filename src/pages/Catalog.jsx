@@ -1,15 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { money } from "../format.js";
 import { useCart } from "../state.jsx";
 import { ProductImage } from "../components/ProductImage.jsx";
+import { useLiveRefresh } from "../realtime/RealtimeProvider.jsx";
+import { ProductGridSkeleton, Skeleton, SkeletonText } from "../components/Skeleton.jsx";
 
 export function ProductTile({ product, size = "md" }) {
   return <ProductImage product={product} className={`tile tile-${size}`} />;
 }
 
-function Hero({ products }) {
+// Cupones en carga: mismas tarjetas punteadas (.ticket) con código y texto simulados
+function CouponStripSkeleton({ count = 3 }) {
+  return (
+    <div className="coupon-strip" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="ticket">
+          <Skeleton variant="pill" className="sk-code" />
+          <SkeletonText lines={2} className="grow" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Hero({ products, loading }) {
   const featured = products?.slice(0, 4) ?? [];
   return (
     <section className="hero">
@@ -33,9 +49,9 @@ function Hero({ products }) {
         </div>
       </div>
       <div className="showcase" aria-hidden="true">
-        {featured.map((p) => (
-          <ProductImage key={p.id} product={p} className="float-tile" />
-        ))}
+        {loading
+          ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} variant="block" className="float-tile sk-dark" />)
+          : featured.map((p) => <ProductImage key={p.id} product={p} className="float-tile" />)}
         <div className="glass-card">
           <b><span className="check">✓</span> Pago verificado</b>
           <span>Webhook HMAC-SHA256 · idempotente</span>
@@ -46,10 +62,14 @@ function Hero({ products }) {
 }
 
 export default function Catalog() {
+  // Cada aviso del canal publico sube la version y las cargas existentes se repiten
+  const [version, bump] = useReducer((n) => n + 1, 0);
+  useLiveRefresh(["catalog.products", "catalog.stock", "catalog.categories", "catalog.coupons"], bump);
   const [products, setProducts] = useState(null);
   const [featured, setFeatured] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [coupons, setCoupons] = useState([]);
+  // null = todavía cargando (se muestra su skeleton)
+  const [categories, setCategories] = useState(null);
+  const [coupons, setCoupons] = useState(null);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("relevancia");
@@ -58,9 +78,9 @@ export default function Catalog() {
   const cart = useCart();
 
   useEffect(() => {
-    api("/api/categories").then((d) => setCategories(d.categories)).catch(() => {});
-    api("/api/coupons").then((d) => setCoupons(d.coupons)).catch(() => {});
-  }, []);
+    api("/api/categories").then((d) => setCategories(d.categories)).catch(() => setCategories([]));
+    api("/api/coupons").then((d) => setCoupons(d.coupons)).catch(() => setCoupons([]));
+  }, [version]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -74,7 +94,7 @@ export default function Catalog() {
         .catch((e) => setError(e.message));
     }, 250);
     return () => clearTimeout(t);
-  }, [q, category, sort]);
+  }, [q, category, sort, version]);
 
   const add = (p) => {
     cart.add(p.id);
@@ -84,9 +104,11 @@ export default function Catalog() {
 
   return (
     <>
-      <Hero products={featured} />
+      <Hero products={featured} loading={!featured && !error} />
 
-      {coupons.length > 0 && (
+      {coupons === null ? (
+        <CouponStripSkeleton />
+      ) : coupons.length > 0 && (
         <div className="coupon-strip">
           {coupons.map((c) => (
             <div key={c.code} className="ticket">
@@ -100,7 +122,7 @@ export default function Catalog() {
       <div className="section-head" id="catalogo">
         <div>
           <h2>Catálogo</h2>
-          <span className="muted">{products ? `${products.length} productos` : "Cargando…"}</span>
+          <span className="muted">{products ? `${products.length} productos` : !error && <Skeleton inline />}</span>
         </div>
         <div className="toolbar">
           <label className="search">
@@ -117,15 +139,17 @@ export default function Catalog() {
 
       <div className="chips">
         <button className={`chip ${category === "" ? "active" : ""}`} onClick={() => setCategory("")}>Todo</button>
-        {categories.map((c) => (
-          <button key={c} className={`chip ${category === c ? "active" : ""}`} onClick={() => setCategory(c)}>{c}</button>
-        ))}
+        {categories === null
+          ? Array.from({ length: 5 }, (_, i) => <Skeleton key={i} variant="pill" className="sk-chip" />)
+          : categories.map((c) => (
+            <button key={c.id} className={`chip ${category === c.id ? "active" : ""}`} onClick={() => setCategory(c.id)} title={c.description || undefined}>{c.name}</button>
+          ))}
       </div>
 
       {error && <p className="alert error">{error}</p>}
       {added && <div className="toast">✓ “{added}” agregado al carrito</div>}
       {!products ? (
-        <div className="grid">{Array.from({ length: 8 }, (_, i) => <div key={i} className="skeleton" />)}</div>
+        !error && <ProductGridSkeleton count={8} />
       ) : products.length === 0 ? (
         <div className="empty"><span className="big">🔍</span><p className="muted">No encontramos productos con esa búsqueda.</p></div>
       ) : (

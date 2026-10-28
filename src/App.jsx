@@ -1,7 +1,8 @@
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, useCart } from "./state.jsx";
-import { ROLE_LABEL } from "./format.js";
+import { isStaff } from "./permissions.js";
 import { Brand } from "./components/Brand.jsx";
+import { AlertBell, AlertToasts } from "./alerts/AlertCenter.jsx";
 import Catalog from "./pages/Catalog.jsx";
 import Product from "./pages/Product.jsx";
 import Cart from "./pages/Cart.jsx";
@@ -12,16 +13,20 @@ import OrderDetail from "./pages/OrderDetail.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Account from "./pages/Account.jsx";
-import Admin from "./pages/Admin.jsx";
+import AdminPanel from "./pages/admin/index.jsx";
 import Security from "./pages/Security.jsx";
 
-function RequireAuth({ children, roles }) {
+const ACCOUNT_PATH = "/cuenta";
+
+function RequireAuth({ children, staff = false }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <p className="muted center">Cargando…</p>;
+  if (loading) return <p className="muted center" aria-busy="true">Cargando…</p>;
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  // Un administrador exigio cambiar la contrasena: la API rechaza todo lo demas hasta hacerlo
+  if (user.mustChangePassword && location.pathname !== ACCOUNT_PATH) return <Navigate to={ACCOUNT_PATH} replace />;
   // Solo usabilidad: la autorizacion real la aplica la API en cada endpoint
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (staff && !isStaff(user)) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -76,9 +81,10 @@ function Header() {
           <NavLink to="/" end>Catálogo</NavLink>
           <NavLink to="/seguridad">Seguridad</NavLink>
           {user && <NavLink to="/pedidos">Mis pedidos</NavLink>}
-          {user && user.role !== "cliente" && <NavLink to="/admin">Administración</NavLink>}
+          {isStaff(user) && <NavLink to="/admin">Administración</NavLink>}
         </nav>
         <div className="nav-right">
+          {user && <AlertBell />}
           <NavLink to="/carrito" className="cart-link">
             🛒 {count > 0 && <span className="badge">{count}</span>}
           </NavLink>
@@ -86,7 +92,7 @@ function Header() {
             <>
               <NavLink to="/cuenta" className="user-chip" title={user.email}>
                 <span className="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
-                <span>{user.name.split(" ")[0]} <small>· {ROLE_LABEL[user.role]}</small></span>
+                <span>{user.name.split(" ")[0]} <small>· {user.roleLabel}</small></span>
               </NavLink>
               <button className="btn ghost sm" onClick={async () => { await logout(); navigate("/"); }}>
                 Salir
@@ -101,10 +107,26 @@ function Header() {
   );
 }
 
+/** Aviso cuando el servidor cerro la sesion (llega en vivo por el canal privado). */
+function SessionNotice() {
+  const { notice, clearNotice } = useAuth();
+  if (!notice) return null;
+  return (
+    <div className="container">
+      <p className="alert warn row between" role="alert">
+        <span>{notice}</span>
+        <span className="row"><Link to="/login" className="btn sm" onClick={clearNotice}>Iniciar sesión</Link><button className="btn ghost sm" onClick={clearNotice}>Cerrar</button></span>
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <>
       <Header />
+      <SessionNotice />
+      <AlertToasts />
       <main className="container main">
         <Routes>
           <Route path="/" element={<Catalog />} />
@@ -117,7 +139,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/cuenta" element={<RequireAuth><Account /></RequireAuth>} />
-          <Route path="/admin/*" element={<RequireAuth roles={["admin", "operador"]}><Admin /></RequireAuth>} />
+          <Route path="/admin/*" element={<RequireAuth staff><AdminPanel /></RequireAuth>} />
           <Route path="/seguridad" element={<Security />} />
           <Route path="*" element={<p className="center muted">Página no encontrada.</p>} />
         </Routes>

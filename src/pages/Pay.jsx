@@ -1,7 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, request } from "../api.js";
 import { money } from "../format.js";
+import { FieldSkeleton, LoadingRegion, Skeleton } from "../components/Skeleton.jsx";
+import { useLiveRefresh } from "../realtime/RealtimeProvider.jsx";
+
+const SandboxHead = () => (
+  <div className="sandbox-head">
+    <b>🔒 PagoSandbox</b>
+    <small>MODO PRUEBA</small>
+  </div>
+);
+
+// Pasarela en carga: tarjeta, monto y formulario simulados dentro del mismo recuadro .sandbox
+function PaySkeleton() {
+  return (
+    <LoadingRegion className="sandbox" label="Cargando pedido…">
+      <SandboxHead />
+      <div aria-hidden="true">
+        <Skeleton variant="block" className="sk-card-visual" />
+        <div className="pay-amount">
+          <Skeleton width={40} />
+          <Skeleton variant="title" width={30} className="price" />
+        </div>
+        <div className="form">
+          <FieldSkeleton />
+          <div className="row">
+            <FieldSkeleton className="grow" />
+            <FieldSkeleton className="grow" />
+          </div>
+          <FieldSkeleton />
+          <Skeleton variant="button" width={100} />
+        </div>
+      </div>
+    </LoadingRegion>
+  );
+}
 
 export default function Pay() {
   const { id } = useParams();
@@ -12,12 +46,14 @@ export default function Pay() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
 
+  const [version, bump] = useReducer((n) => n + 1, 0);
+  useLiveRefresh("order.updated", bump, { filter: (p) => p.orderId === id });
   useEffect(() => {
     api(`/api/orders/${encodeURIComponent(id)}`).then((d) => setOrder(d.order)).catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, version]);
 
   if (error) return <p className="alert error">{error}</p>;
-  if (!order) return <p className="muted center">Cargando…</p>;
+  if (!order) return <PaySkeleton />;
   if (order.status !== "pendiente_pago") {
     return (
       <div className="empty">
@@ -48,10 +84,7 @@ export default function Pay() {
 
   return (
     <div className="sandbox">
-      <div className="sandbox-head">
-        <b>🔒 PagoSandbox</b>
-        <small>MODO PRUEBA</small>
-      </div>
+      <SandboxHead />
       <div className="credit-card" aria-hidden="true">
         <div className="row between"><span className="chip-ic" /><span className="brand-tag">{digits.startsWith("4") ? "VISA" : digits.startsWith("5") ? "Mastercard" : "CARD"}</span></div>
         <div className="number">{masked}</div>

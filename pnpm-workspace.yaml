@@ -4,8 +4,5 @@
 minimumReleaseAge: 1440
 strictDepBuilds: true
 onlyBuiltDependencies: []
-# Las funciones de Netlify empaquetan @netlify/blobs como modulo externo; se elevan solo los
-# paquetes @netlify/* para que sus dependencias se resuelvan dentro del zip de la funcion.
-# El resto del arbol sigue aislado (sin dependencias fantasma).
-publicHoistPattern:
-  - "@netlify/*"
+# Arbol de dependencias aislado (sin dependencias fantasma). Las funciones se empaquetan con
+# esbuild, que incluye @insforge/sdk y sus dependencias dentro del zip de cada funcion.

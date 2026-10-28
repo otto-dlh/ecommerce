@@ -13,4 +13,4 @@ export const STATUS = {
   cancelado: { label: "Cancelado", tone: "muted" },
 };
 
-export const ROLE_LABEL = { cliente: "Cliente", operador: "Operador", admin: "Administrador" };
+export const ROLE_LABEL = { cliente: "Cliente", operador: "Operador", auditor: "Auditor", admin: "Administrador" };

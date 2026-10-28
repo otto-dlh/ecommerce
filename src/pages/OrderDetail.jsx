@@ -4,6 +4,42 @@ import { api } from "../api.js";
 import { date, money, STATUS } from "../format.js";
 import { useAuth } from "../state.jsx";
 import { StatusBadge } from "./Orders.jsx";
+import { useLiveRefresh } from "../realtime/RealtimeProvider.jsx";
+import { LoadingRegion, Skeleton, SkeletonText, TableRowsSkeleton, TotalsSkeleton } from "../components/Skeleton.jsx";
+
+const HEADERS = ["Producto", "Precio", "Cant.", "Total"];
+
+// Detalle en carga: encabezado, tabla de productos con totales y panel de envío/historial
+function OrderDetailSkeleton() {
+  return (
+    <LoadingRegion label="Cargando pedido…">
+      <div aria-hidden="true">
+        <span className="back"><Skeleton inline /></span>
+        <div className="row between">
+          <h1 className="grow"><Skeleton variant="title" width={40} /></h1>
+          <Skeleton variant="pill" />
+        </div>
+        <div className="two-col">
+          <div className="panel scroll">
+            <table className="table">
+              <thead><tr>{HEADERS.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+              <tbody><TableRowsSkeleton rows={2} columns={HEADERS.length} /></tbody>
+            </table>
+            <TotalsSkeleton />
+          </div>
+          <aside className="panel">
+            <h3>Envío</h3>
+            <p><SkeletonText lines={4} /></p>
+            <h3>Historial</h3>
+            <ol className="timeline">
+              {[0, 1].map((i) => <li key={i}><Skeleton width={40} /><Skeleton width={60} className="small" /></li>)}
+            </ol>
+          </aside>
+        </div>
+      </div>
+    </LoadingRegion>
+  );
+}
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -14,6 +50,7 @@ export default function OrderDetail() {
 
   const load = () => api(`/api/orders/${encodeURIComponent(id)}`).then((d) => setOrder(d.order)).catch((e) => setError(e.message));
   useEffect(() => { load(); }, [id]);
+  useLiveRefresh("order.updated", load, { filter: (p) => p.orderId === id });
 
   const cancel = async () => {
     if (!confirm("¿Cancelar este pedido? Se liberará el inventario reservado.")) return;
@@ -26,7 +63,7 @@ export default function OrderDetail() {
   };
 
   if (error) return <><Link to="/pedidos" className="back">← Mis pedidos</Link><p className="alert error">{error}</p></>;
-  if (!order) return <p className="muted center">Cargando…</p>;
+  if (!order) return <OrderDetailSkeleton />;
   const mine = order.userId === user.id;
 
   return (
@@ -38,9 +75,9 @@ export default function OrderDetail() {
         <StatusBadge status={order.status} />
       </div>
       <div className="two-col">
-        <div className="panel">
+        <div className="panel scroll">
           <table className="table">
-            <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Total</th></tr></thead>
+            <thead><tr>{HEADERS.map((h) => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {order.items.map((i) => (
                 <tr key={i.productId}><td>{i.name}</td><td>{money(i.unitPrice)}</td><td>{i.qty}</td><td>{money(i.lineTotal)}</td></tr>

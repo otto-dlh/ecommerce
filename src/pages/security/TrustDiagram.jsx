@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-// Fronteras de confianza F1–F5 (Figura 1 del Entregable 1) adaptadas al despliegue en Netlify.
+// Fronteras de confianza F1–F5 (Figura 1 del Entregable 1) adaptadas al despliegue en Netlify + InsForge.
+// F6 es nueva: el navegador escucha eventos realtime de InsForge sin pasar por la API.
 const BOUNDARIES = {
   F1: {
     title: "Navegador ↔ CDN de Netlify",
@@ -27,16 +28,16 @@ const BOUNDARIES = {
     threats: ["T01", "T02", "T04", "T05", "T13"],
   },
   F3: {
-    title: "API ↔ Netlify Blobs",
+    title: "API ↔ InsForge (PostgreSQL y Storage)",
     zone: "Datos privados",
-    crosses: "Lecturas y escrituras de usuarios, pedidos, inventario, sesiones y bitácora.",
+    crosses: "Consultas HTTPS con la clave de administrador (solo en el servidor): usuarios, sesiones, pedidos, inventario, imágenes y bitácora.",
     controls: [
-      "Almacenes privados, sin dirección pública",
-      "Escrituras condicionales (ETag) para evitar sobreventa",
-      "Tokens de sesión guardados solo como hash SHA-256",
-      "Bitácora append-only con firma HMAC por registro",
+      "Seguridad por filas activa y sin permisos para las claves públicas",
+      "Transacciones con SELECT … FOR UPDATE: el pedido se reserva completo o no se reserva",
+      "Tokens de sesión guardados solo como hash SHA-256 y secretos MFA cifrados",
+      "Bitácora con firma HMAC y trigger que impide modificar o borrar registros",
     ],
-    threats: ["T03", "T04", "T08", "T12", "T14"],
+    threats: ["T03", "T04", "T08", "T10", "T12", "T14"],
   },
   F4: {
     title: "API ↔ Pasarela de pagos",
@@ -61,6 +62,18 @@ const BOUNDARIES = {
       "Despliegue solo desde la rama protegida",
     ],
     threats: ["T06", "T10", "T11"],
+  },
+  F6: {
+    title: "Navegador ↔ Realtime de InsForge",
+    zone: "Canal en vivo",
+    crosses: "WebSocket con la clave anónima (pública por diseño) para recibir avisos en vivo, y fotos de producto del bucket público.",
+    controls: [
+      "El aviso es solo una señal (ids y estado); los datos se piden a la API, que autoriza",
+      "Canal privado por sesión con id aleatorio de 128 bits; se cierra al revocar la sesión",
+      "Nadie puede publicar desde el navegador (sin política de escritura en realtime)",
+      "La clave anónima no lee tablas ni ejecuta funciones de la base de datos",
+    ],
+    threats: ["T04", "T09", "T12"],
   },
 };
 
@@ -111,7 +124,7 @@ export default function TrustDiagram() {
       </div>
 
       <div className="trust-canvas">
-        <svg viewBox="0 0 880 430" role="img" aria-label="Arquitectura de Tienda Segura con fronteras de confianza F1 a F5">
+        <svg viewBox="0 -44 880 474" role="img" aria-label="Arquitectura de Tienda Segura con fronteras de confianza F1 a F6">
           <defs>
             <marker id="td-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" className="td-arrowhead" />
@@ -136,7 +149,7 @@ export default function TrustDiagram() {
           <Node x={20} y={110} w={160} h={92} icon="🧑‍💻" title="Navegador" lines={["Cliente / Admin", "React SPA"]} />
           <Node x={220} y={110} w={160} h={92} icon="🌐" title="CDN Netlify" lines={["TLS · cabeceras", "CSP"]} />
           <Node x={430} y={75} w={190} h={160} icon="⚙️" title="Función api" lines={["Sesión · CSRF", "Permisos por rol", "Validación", "Auditoría"]} tone="core" />
-          <Node x={680} y={75} w={170} h={160} icon="🗄️" title="Netlify Blobs" lines={["Usuarios · sesiones", "Pedidos · stock", "Bitácora firmada"]} />
+          <Node x={680} y={75} w={170} h={160} icon="🗄️" title="InsForge" lines={["PostgreSQL · RLS", "Pedidos · stock", "Bitácora firmada", "Storage · Realtime"]} />
           <Node x={680} y={315} w={170} h={92} icon="💳" title="Pasarela" lines={["Sandbox externo", "Tokeniza la tarjeta"]} />
           <Node x={230} y={345} w={180} h={64} icon="📦" title="Git + Build" lines={["pnpm · lockfile"]} />
 
@@ -148,6 +161,8 @@ export default function TrustDiagram() {
           <text x="572" y="384" className="td-link-label">webhook firmado</text>
           <path d="M410,377 C480,377 520,320 520,235" className="td-link dashed" markerEnd="url(#td-arrow)" />
           <text x="470" y="398" className="td-link-label">despliegue</text>
+          <path d="M830,75 L830,-16 L50,-16 L50,110" className="td-link dashed" markerEnd="url(#td-arrow)" />
+          <text x="430" y="-24" className="td-link-label">WebSocket realtime (clave anónima, solo recibe)</text>
 
           {/* Fronteras de confianza */}
           <Boundary id="F1" x1={200} y1={60} x2={200} y2={270} lx={200} ly={86} active={selected === "F1"} onSelect={setSelected} />
@@ -155,6 +170,7 @@ export default function TrustDiagram() {
           <Boundary id="F3" x1={650} y1={60} x2={650} y2={245} lx={650} ly={86} active={selected === "F3"} onSelect={setSelected} />
           <Boundary id="F4" x1={650} y1={285} x2={650} y2={420} lx={650} ly={392} active={selected === "F4"} onSelect={setSelected} />
           <Boundary id="F5" x1={215} y1={295} x2={640} y2={295} lx={250} ly={295} active={selected === "F5"} onSelect={setSelected} />
+          <Boundary id="F6" x1={650} y1={-38} x2={650} y2={8} lx={650} ly={-16} active={selected === "F6"} onSelect={setSelected} />
         </svg>
       </div>
 

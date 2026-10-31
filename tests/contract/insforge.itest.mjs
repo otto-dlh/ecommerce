@@ -4,11 +4,12 @@
 // Excepcion: la bitacora es de solo insercion; deja registros con action "contrato.prueba".
 // Correla en una rama de InsForge o antes de cargar datos reales.
 import { describeRepositoryContract } from "./repositoryContract.mjs";
-import { createInsforgeAdapters } from "../../netlify/lib/infra/insforge/index.mjs";
-import { createDb, createInsforgeClient } from "../../netlify/lib/infra/insforge/db.mjs";
+import { createInsforgeAdapters } from "../../server/infra/insforge/index.mjs";
+import { createDb, createInsforgeClient } from "../../server/infra/insforge/db.mjs";
+import { loadConfig } from "../../server/config.mjs";
 
 async function purgeContractData() {
-  const db = createDb(createInsforgeClient(process.env));
+  const db = createDb(createInsforgeClient(loadConfig(process.env).insforge));
   const users = await db.run(db.from("app_users").select("id").like("email", "%@contrato.test"));
   const userIds = users.map((u) => u.id);
   // Orden de borrado segun las llaves foraneas (lo demas cae en cascada)
@@ -25,4 +26,4 @@ if (process.env.DATA_PROVIDER !== "insforge" || !process.env.INSFORGE_URL) {
   throw new Error("Configura DATA_PROVIDER=insforge e INSFORGE_URL/INSFORGE_API_KEY (pnpm test:insforge usa .env)");
 }
 
-describeRepositoryContract("insforge", async () => createInsforgeAdapters(process.env), { cleanup: purgeContractData });
+describeRepositoryContract("insforge", async () => createInsforgeAdapters(loadConfig(process.env).insforge), { cleanup: purgeContractData });

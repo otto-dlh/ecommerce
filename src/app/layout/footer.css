@@ -1,0 +1,16 @@
+/* ---------- Pie de pagina ---------- */
+.footer { background: var(--ink); color: #94a3b8; padding: 2.6rem 0 1.4rem; font-size: 0.88rem; margin-top: 2rem; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+.footer .brand { color: #fff; margin-bottom: 0.8rem; }
+.footer .brand small { color: #64748b; }
+.footer h4 { color: #fff; font-family: var(--font-display); margin: 0 0 0.8rem; font-size: 0.95rem; }
+.footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.45rem; }
+.footer a { color: #cbd5e1; }
+.footer a:hover { color: #fff; }
+.footer-bottom { border-top: 1px solid rgb(255 255 255 / 8%); padding-top: 1.2rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
+.badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 1rem; }
+.badges span { font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 7px; background: rgb(255 255 255 / 7%); border: 1px solid rgb(255 255 255 / 12%); color: #e2e8f0; }
+
+@media (max-width: 900px) {
+  .footer-grid { grid-template-columns: 1fr; }
+}

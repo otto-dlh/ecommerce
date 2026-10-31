@@ -33,8 +33,10 @@ Las variables están documentadas en [`.env.example`](.env.example). Cópialo co
 | `APP_SECRET` | Servidor | ≥ 32 caracteres. Firma la bitácora y los avisos de pago y cifra los secretos MFA. **Obligatoria:** sin ella la API no arranca. Local y Netlify comparten la base de datos, así que deben usar el **mismo valor** |
 | `VITE_INSFORGE_URL` | Navegador | Misma URL que `INSFORGE_URL`; también se usa para la CSP (`connect-src` e `img-src`) |
 | `VITE_INSFORGE_ANON_KEY` | Navegador | Clave anónima, pública por diseño: solo escucha avisos realtime |
-| `ALLOWED_ORIGINS` | Servidor (opcional) | Orígenes extra permitidos (separados por coma) si usas un dominio adicional |
+| `ALLOWED_ORIGINS` | Servidor (opcional) | Orígenes extra permitidos, completos (`https://dominio`) y separados por coma, si usas un dominio adicional |
 | `SEED_PASSWORD_ADMIN` | Solo `pnpm seed` | Contraseña inicial del administrador. Obligatoria si la base de datos todavía no tiene la cuenta `admin@tienda.test` |
+
+Al arrancar, `server/config.mjs` valida todas las variables del servidor. Si falta alguna o es inválida, la API no arranca (responde 500) y el log de la función nombra exactamente cuál, sin mostrar valores.
 
 Genera `APP_SECRET` con `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
 
@@ -71,22 +73,22 @@ pnpm dev:netlify   # alternativa con `netlify dev` (ver nota)
 pnpm serve         # compila y sirve el build como en producción (con la CSP estricta)
 ```
 
-- `pnpm dev` ejecuta las funciones de `netlify/functions` dentro del servidor de Vite (`scripts/vite-local-functions.mjs`) y les pasa las variables del `.env`. Se prefiere a `netlify dev` porque su proxy reintenta toda respuesta 403/404 con variantes `.html` (imita al CDN), lo que cambia los códigos HTTP que devuelve la API y vuelve a ejecutar la solicitud. En Netlify las respuestas de las funciones llegan sin cambios.
-- La **Content-Security-Policy** estricta se genera en `dist/_headers` solo al compilar (ver `vite.config.js`). En desarrollo no se aplica porque Vite necesita un script en línea para la recarga en caliente. Para probar con la CSP, usa `pnpm serve`.
+- `pnpm dev` ejecuta las funciones de `netlify/functions` dentro del servidor de Vite (`tooling/vite/localFunctions.mjs`) y les pasa las variables del `.env`. Se prefiere a `netlify dev` porque su proxy reintenta toda respuesta 403/404 con variantes `.html` (imita al CDN), lo que cambia los códigos HTTP que devuelve la API y vuelve a ejecutar la solicitud. En Netlify las respuestas de las funciones llegan sin cambios.
+- La **Content-Security-Policy** estricta se genera en `dist/_headers` solo al compilar (ver `tooling/vite/csp.mjs`, probada en `tests/tooling/csp.test.mjs`). En desarrollo no se aplica porque Vite necesita un script en línea para la recarga en caliente. Para probar con la CSP, usa `pnpm serve`.
 - Para trabajar **sin InsForge**: `DATA_PROVIDER=memory pnpm dev` (en PowerShell: `$env:DATA_PROVIDER="memory"; pnpm dev`). La API arranca con el catálogo y una cuenta demo por rol en memoria (ver *Cuentas*); el realtime no emite avisos.
 
 ### Scripts de verificación
 
 | Comando | Qué hace |
 |---|---|
-| `pnpm test` | Pruebas unitarias del dominio y los servicios, y suite de contrato contra el adaptador en memoria (`node --test`, sin dependencias) |
+| `pnpm test` | Pruebas del dominio y los casos de uso de cada módulo, suite de contrato contra el adaptador en memoria, validación de la configuración, contrato frontend ↔ servidor (cada endpoint del catálogo del navegador existe en el router) y **pruebas de arquitectura** que hacen cumplir las reglas de dependencia (`node --test`, sin dependencias) |
 | `pnpm test:insforge` | La misma suite de contrato contra InsForge real. **Escribe datos de prueba** (los borra al terminar), pero los registros de auditoría que genera no se pueden borrar desde la API porque la bitácora es *append-only* |
-| `pnpm check:permissions [url]` | Contra un servidor con `DATA_PROVIDER=memory`: inicia sesión con la cuenta demo de cada rol, llama a cada endpoint de administración y compara el código HTTP con la matriz de `domain/permissions.mjs` (por defecto contra `http://localhost:8888`) |
+| `pnpm check:permissions [url]` | Contra un servidor con `DATA_PROVIDER=memory`: inicia sesión con la cuenta demo de cada rol, llama a cada endpoint de administración y compara el código HTTP con la matriz de `server/modules/identity/domain/permissions.mjs` (por defecto contra `http://localhost:8888`) |
 | `pnpm seed` | Siembra el catálogo, los cupones y el administrador en el proveedor configurado; solo crea lo que falta |
 
 ## Roles
 
-La matriz vive en `netlify/lib/domain/permissions.mjs` y la aplica el pipeline HTTP en cada ruta; el frontend solo oculta botones.
+La matriz vive en `server/modules/identity/domain/permissions.mjs` y la aplica el pipeline HTTP en cada ruta; el frontend solo oculta botones.
 
 | Permiso | Administrador | Operador | Auditor | Cliente |
 |---|:-:|:-:|:-:|:-:|
@@ -107,7 +109,7 @@ Reglas adicionales: nadie cambia su propio rol ni su estado, siempre queda al me
 ## Cuentas
 
 - **Base de datos real (InsForge):** solo existe el administrador `admin@tienda.test`; su contraseña la define quien administra (`SEED_PASSWORD_ADMIN` en la primera siembra y luego «Mi cuenta → Cambiar contraseña»). Los clientes se registran en «Crear cuenta» y el administrador asigna los roles de personal en «Usuarios». Las cuentas demo que existían están desactivadas (se conserva su historial).
-- **Desarrollo y pruebas (`DATA_PROVIDER=memory`):** se crea una cuenta demo por rol (administrador, operador, auditor y dos clientes) con contraseñas conocidas, definidas en `netlify/lib/application/seedData.mjs`. Nunca se crean en la base de datos real.
+- **Desarrollo y pruebas (`DATA_PROVIDER=memory`):** se crea una cuenta demo por rol (administrador, operador, auditor y dos clientes) con contraseñas conocidas, definidas en `server/bootstrap/seedData.mjs`. Nunca se crean en la base de datos real.
 - **MFA:** en «Mi cuenta → Verificación en dos pasos» se escanea un código QR con la app autenticadora (o se ingresa la clave a mano).
 
 Tarjetas de prueba: `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002` (rechazada). Cupones: `BIENVENIDA10`, `QUETZAL50`, `ENVIOGRATIS` (se administran en el panel).
@@ -133,7 +135,7 @@ Tarjetas de prueba: `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002` (re
 
 ### Alertas por rol
 
-Qué es una alerta, su severidad y quién la recibe lo decide el dominio (`netlify/lib/domain/alerts.mjs`); el servidor la envía solo a los canales privados de las sesiones con el permiso correspondiente.
+Qué es una alerta, su severidad y quién la recibe lo decide el dominio (`server/modules/notifications/domain/alerts.mjs`); el servidor la envía solo a los canales privados de las sesiones con el permiso correspondiente.
 
 | Quién | Alertas |
 |---|---|
@@ -146,48 +148,54 @@ Reglas: nunca se avisa a quien hizo la acción; las alertas llevan datos mínimo
 
 ## Estructura
 
-Arquitectura por capas con **puertos y adaptadores**: las dependencias apuntan hacia adentro y el dominio no conoce a InsForge.
+Monolito modular con **puertos y adaptadores**: cada funcionalidad es un módulo con sus capas adentro y las dependencias apuntan hacia el dominio. El detalle (reglas, módulos, flujo de una petición y decisiones) está en [`docs/architecture.md`](docs/architecture.md).
 
 ```
-netlify/functions/api.mjs          Punto de entrada de la API (compone pipeline + rutas)
-netlify/functions/sandbox-pay.mjs  Proveedor de pagos simulado (frontera F4)
-netlify/lib/domain/                Reglas puras, sin E/S: precios, cupones, estados del pedido, permisos, política de acceso, validación
-netlify/lib/application/           Casos de uso (un servicio por responsabilidad), bus de eventos y notificador realtime
-netlify/lib/ports/                 Contratos de cada repositorio (usuarios, sesiones, productos, pedidos, bitácora, archivos, realtime…)
-netlify/lib/infra/insforge/        ÚNICO lugar que importa @insforge/sdk: repositorios, storage, realtime y traducción de errores
-netlify/lib/infra/memory/          Adaptador en memoria (pruebas y desarrollo sin base de datos)
-netlify/lib/infra/container.mjs    Raíz de composición: elige el adaptador según DATA_PROVIDER
-netlify/lib/http/                  Pipeline (rate limit, sesión, CSRF, authN, authZ), errores → HTTP y rutas delgadas
-netlify/lib/security/              scrypt, HMAC, TOTP, AES-GCM y claves derivadas por propósito
-migrations/                        Esquema PostgreSQL del adaptador InsForge (tablas, RLS, RPC atómicas, canales)
-src/realtime/                      Cliente realtime detrás de una interfaz + hooks useLiveRefresh / useRealtimeEvent
-src/pages/admin/                   Un componente por sección del panel
-tests/                             Dominio, servicios y suite de contrato de repositorios
-scripts/                           seed, check-permissions, funciones en Vite y fotos de producto
-netlify.toml                       Build y cabeceras de seguridad (la CSP se genera desde vite.config.js)
-pnpm-workspace.yaml                Política de cadena de suministro de pnpm
+server/                         Backend: no sabe que corre en Netlify
+  config.mjs                    Único lugar que lee variables de entorno; las valida al arrancar
+  modules/<módulo>/             identity · catalog · sales · customers · audit · reporting · notifications
+    domain/                     Reglas puras, sin E/S
+    application/                Casos de uso (un servicio por responsabilidad)
+    http/                       Rutas delgadas: validan → llaman al caso de uso → responden
+    ports.mjs                   Contratos que debe cumplir cualquier adaptador de datos
+    index.mjs                   API pública: lo único que otros módulos pueden importar
+  shared/                       Núcleo sin reglas de negocio: errores, validación, criptografía, rate limit, eventos
+  http/                         Pipeline de seguridad (rate limit, sesión, CSRF, authN, authZ) y errores → HTTP
+  infra/insforge/               Un archivo por módulo; db.mjs es el ÚNICO que importa @insforge/sdk
+  infra/memory/                 Espejo en memoria (pruebas y desarrollo sin base de datos)
+  bootstrap/                    Raíz de composición: contenedor, servicios, rutas, puertos y siembra
+  sandbox-gateway/              Pasarela de pagos simulada (proveedor externo, aislado de la tienda)
+netlify/functions/              Adaptadores de Netlify de pocas líneas (api, sandbox-pay)
+src/                            Frontend React por features; shared/api es la ÚNICA capa que habla con la API
+tests/                          Mismo árbol que server/ + contract/ + config.test.mjs + architecture.test.mjs
+tooling/                        Plugins de Vite (CSP, funciones locales) y scripts (seed, check-permissions, fotos)
+migrations/                     Esquema PostgreSQL del adaptador InsForge (tablas, RLS, RPC atómicas, canales)
+docs/                           Arquitectura y cambios a reflejar en el documento del proyecto
+netlify.toml                    Build y cabeceras de seguridad (la CSP se genera en tooling/vite/csp.mjs)
+pnpm-workspace.yaml             Política de cadena de suministro de pnpm
 ```
 
 ## Cómo cambiar de base de datos
 
-El cambio queda contenido en `netlify/lib/infra/`:
+El cambio queda contenido en `server/infra/` y en las variables de entorno:
 
 1. **Otro endpoint del mismo proveedor:** cambia `INSFORGE_URL`, `INSFORGE_API_KEY` y las `VITE_*`. No se toca código.
 2. **Otra base de datos** (p. ej. Supabase, PostgreSQL propio, MongoDB):
-   1. Crea `netlify/lib/infra/<proveedor>/index.mjs`, que devuelva los mismos repositorios que `infra/insforge/index.mjs`. Los contratos están en `netlify/lib/ports/` y `assertImplementsPorts` avisa al arrancar si falta alguno.
-   2. Regístralo en `PROVIDERS` de `infra/container.mjs` (una línea) y define `DATA_PROVIDER=<proveedor>`.
+   1. Crea `server/infra/<proveedor>/` con un archivo por módulo, como `infra/insforge/`. Los contratos están en el `ports.mjs` de cada módulo y `assertImplementsPorts` avisa al arrancar si falta alguno.
+   2. Regístralo en `PROVIDERS` de `server/bootstrap/container.mjs` y en `DATA_PROVIDERS` de `server/config.mjs` (una línea en cada uno), y define `DATA_PROVIDER=<proveedor>`.
    3. Ejecuta la suite de contrato contra él (copia `tests/contract/insforge.itest.mjs`): debe pasar las mismas pruebas que el adaptador en memoria y el de InsForge.
    4. Si es SQL, reutiliza `migrations/` como referencia. Lo que debe garantizar la base de datos es la **atomicidad** (crear el pedido descontando stock, cambiar el estado con comparación, contadores de rate limit) y que la bitácora sea *append-only*. Las reglas del negocio siguen en el dominio.
-3. **Otro proveedor de realtime:** implementa el puerto `RealtimePublisher` en el servidor y la interfaz de `src/realtime/realtimeClient.js` en el navegador. Ninguna página usa el SDK directamente.
+3. **Otro proveedor de realtime:** implementa el puerto `RealtimePublisher` (`server/modules/notifications/ports.mjs`) en el servidor y la interfaz del cliente realtime en el navegador. Ninguna página usa el SDK directamente.
+4. **Otro hosting:** solo cambian los adaptadores de `netlify/functions/` (cada uno arranca `server/`); el servidor no depende de Netlify.
 
-Dominio, servicios, rutas y frontend no cambian en ningún caso.
+Dominio, casos de uso, rutas y frontend no cambian en ningún caso.
 
 ## Fotos de producto
 
 Las fotos iniciales son de **Unsplash** bajo la [Unsplash License](https://unsplash.com/license): uso gratuito (comercial incluido), sin marca de agua y sin atribución obligatoria. Igual se muestra el crédito del fotógrafo en la página de cada producto. Se eligieron fotos de la licencia gratuita (no Unsplash+), sin personas ni marcas comerciales visibles.
 
-- `scripts/photo-sources.json`: qué foto de Unsplash corresponde a cada producto.
-- `node scripts/fetch-stock-photos.mjs [id ...]`: descarga las fotos con el enlace oficial (así la descarga le cuenta al fotógrafo), las recorta a 900×900, valida que sean JPEG y genera `public/products/credits.json`.
+- `tooling/scripts/photo-sources.json`: qué foto de Unsplash corresponde a cada producto.
+- `node tooling/scripts/fetch-stock-photos.mjs [id ...]`: descarga las fotos con el enlace oficial (así la descarga le cuenta al fotógrafo), las recorta a 900×900, valida que sean JPEG y genera `public/products/credits.json`.
 - Las fotos iniciales se sirven desde el propio sitio. Las que sube un administrador van al bucket público `product-images` de InsForge Storage, cuyo origen es el único externo permitido en `img-src`. Si un producto no tiene foto, se muestra su emoji sobre un degradado.
 
 ## Verificación realizada

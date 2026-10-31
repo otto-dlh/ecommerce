@@ -3,8 +3,8 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
-import { ConflictError, NotFoundError } from "../../netlify/lib/domain/errors.mjs";
-import { DEFAULT_POLICY } from "../../netlify/lib/domain/accessPolicy.mjs";
+import { ConflictError, NotFoundError } from "../../server/shared/domain/errors.mjs";
+import { DEFAULT_POLICY } from "../../server/modules/identity/domain/accessPolicy.mjs";
 
 const run = randomUUID().slice(0, 8);
 let seq = 0;
@@ -19,12 +19,12 @@ const userFixture = (overrides = {}) => ({
 
 /**
  * @param {string} providerName
- * @param {() => Promise<import("../../netlify/lib/ports/index.mjs").Adapters>} makeAdapters
+ * @param {() => Promise<import("../../server/bootstrap/ports.mjs").Adapters>} makeAdapters
  * @param {{ cleanup?: () => Promise<void> }} [options]  borra los datos de prueba en proveedores persistentes
  */
 export function describeRepositoryContract(providerName, makeAdapters, { cleanup } = {}) {
   describe(`Contrato de puertos · ${providerName}`, () => {
-    /** @type {import("../../netlify/lib/ports/index.mjs").Adapters} */
+    /** @type {import("../../server/bootstrap/ports.mjs").Adapters} */
     let r;
     let category;
     before(async () => {

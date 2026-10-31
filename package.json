@@ -12,8 +12,8 @@
     "preview": "vite preview",
     "test": "node --test \"tests/**/*.test.mjs\"",
     "test:insforge": "node --env-file=.env --test tests/contract/insforge.itest.mjs",
-    "seed": "node --env-file=.env scripts/seed.mjs",
-    "check:permissions": "node scripts/check-permissions.mjs"
+    "seed": "node --env-file=.env tooling/scripts/seed.mjs",
+    "check:permissions": "node tooling/scripts/check-permissions.mjs"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",

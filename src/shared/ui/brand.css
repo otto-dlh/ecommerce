@@ -1,0 +1,6 @@
+/* Marca de la tienda (logo + nombre) */
+.brand { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-display); font-weight: 700; color: var(--text); font-size: 1.2rem; letter-spacing: -0.02em; }
+.brand:hover { color: var(--text); }
+.brand-mark { width: 36px; height: 36px; border-radius: 11px; background: var(--grad); display: grid; place-items: center; box-shadow: 0 8px 20px -6px rgb(79 70 229 / 60%); }
+.brand-mark svg { width: 20px; height: 20px; }
+.brand small { display: block; font-family: var(--font); font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: -2px; }

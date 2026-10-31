@@ -1,0 +1,22 @@
+/* ---------- Carrito ---------- */
+.cart-line { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 0; border-bottom: 1px solid var(--line); }
+.cart-line:last-child { border-bottom: none; }
+.cart-line .emoji { font-size: 1.9rem; width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center; background: #f1f2fa; flex-shrink: 0; }
+.cart-line a { font-weight: 700; color: var(--text); }
+.line-total { min-width: 96px; text-align: right; font-family: var(--font-display); }
+
+/* Líneas del carrito en carga */
+.cart-line .sk-button { width: 2.2rem; }
+.sk-cart-name { min-width: 4rem; }
+/* En pantallas angostas no cabe el total de la línea: se prioriza el nombre del producto */
+@media (max-width: 800px) { .sk-cart-total { display: none; } }
+
+/* ---------- Carrito en pantallas angostas ---------- */
+.cart-line .grow { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  /* El nombre ocupa su propia fila; cantidad, total y quitar quedan debajo, alineados a la derecha */
+  .cart-line { flex-wrap: wrap; row-gap: 0.5rem; }
+  .cart-line .grow { flex: 1 1 calc(100% - 58px - 0.9rem); }
+  .cart-line .qty { margin-left: calc(58px + 0.9rem); }
+  .cart-line .line-total { min-width: 0; margin-left: auto; }
+}

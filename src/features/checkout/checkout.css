@@ -1,0 +1,22 @@
+/* ---------- Resumen del checkout ---------- */
+.summary { list-style: none; padding: 0; margin: 0; }
+.summary li { padding: 0.35rem 0; }
+
+/* ---------- Pasarela sandbox ---------- */
+.sandbox { max-width: 470px; margin: 0 auto; background: #fff; border-radius: 26px; padding: 1.6rem; box-shadow: 0 30px 70px -25px rgb(79 70 229 / 45%); border: 1px solid #e0e0fb; }
+.sandbox-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+.sandbox-head b { font-family: var(--font-display); font-size: 1.1rem; display: flex; align-items: center; gap: 0.4rem; }
+.sandbox-head small { font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 0.2rem 0.55rem; border-radius: 999px; }
+.credit-card { position: relative; overflow: hidden; height: 200px; border-radius: 20px; padding: 1.3rem; color: #fff; background: linear-gradient(135deg, #1e1b4b, #4338ca 55%, #0891b2); box-shadow: 0 24px 40px -18px rgb(30 27 75 / 70%); display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 1.3rem; }
+.credit-card::before { content: ""; position: absolute; width: 260px; height: 260px; border-radius: 50%; background: rgb(255 255 255 / 10%); top: -120px; right: -80px; }
+.credit-card::after { content: ""; position: absolute; width: 200px; height: 200px; border-radius: 50%; background: rgb(236 72 153 / 30%); filter: blur(30px); bottom: -100px; left: -40px; }
+.credit-card .chip-ic { width: 44px; height: 32px; border-radius: 7px; background: linear-gradient(135deg, #fde68a, #d97706); }
+.credit-card .number { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.12em; position: relative; z-index: 1; }
+.credit-card .meta { display: flex; justify-content: space-between; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.9; position: relative; z-index: 1; }
+.credit-card .brand-tag { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 1.2rem; }
+.pay-amount { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.8rem; }
+.pay-amount .price { font-size: 1.9rem; }
+.sandbox .hint { margin-top: 1rem; }
+
+/* Pasarela en carga */
+.sk-card-visual { height: 200px; border-radius: 20px; margin-bottom: 1.3rem; }

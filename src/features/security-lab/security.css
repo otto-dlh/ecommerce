@@ -1,0 +1,22 @@
+/* ---------- Seguridad ---------- */
+.sec-hero { position: relative; overflow: hidden; isolation: isolate; background: var(--ink); color: #fff; border-radius: 28px; padding: clamp(1.6rem, 4vw, 2.8rem); margin-bottom: 1.5rem; }
+.sec-hero::before { content: ""; position: absolute; z-index: -1; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, #22c55e, transparent 65%); opacity: 0.35; top: -260px; right: -120px; }
+.sec-hero::after { content: ""; position: absolute; z-index: -1; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, #7c3aed, transparent 65%); opacity: 0.5; bottom: -240px; left: -100px; }
+.sec-hero h1 { font-size: clamp(1.9rem, 4vw, 2.8rem); margin: 0.8rem 0 0.6rem; }
+.sec-hero p { color: #cbd5e1; max-width: 640px; line-height: 1.6; margin: 0; }
+.score { display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; }
+.score div { background: rgb(255 255 255 / 7%); border: 1px solid rgb(255 255 255 / 14%); border-radius: 16px; padding: 0.8rem 1.1rem; min-width: 130px; }
+.score b { display: block; font-family: var(--font-display); font-size: 1.7rem; }
+.score span { font-size: 0.78rem; color: #94a3b8; }
+.lab-row td:first-child { width: 90px; }
+.result-pass { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #dcfce7; color: #15803d; box-shadow: 0 0 0 3px rgb(34 197 94 / 12%); }
+.result-fail { display: inline-flex; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #fef3c7; color: #b45309; }
+.lab-toggle { all: unset; display: block; margin-top: 0.35rem; font-size: 0.78rem; font-weight: 700; color: var(--indigo); cursor: pointer; white-space: nowrap; }
+/* En movil la tabla se desplaza en horizontal: el panel de pasos usa solo el ancho visible y se queda fijo */
+.lab-scroll { container-type: inline-size; }
+.lab-toggle:hover { color: var(--violet); }
+.lab-toggle:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 4px; }
+.lab-row.open td { border-bottom-color: transparent; }
+.table tbody tr.lab-detail:hover { background: none; }
+.lab-detail > td { padding-top: 0; }
+.diagram { background: var(--ink); color: #c7d2fe; padding: 1.2rem; border-radius: 16px; overflow-x: auto; font-size: 0.8rem; line-height: 1.55; margin: 0; }

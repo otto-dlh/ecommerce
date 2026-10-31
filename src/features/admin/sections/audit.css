@@ -1,0 +1,16 @@
+/* ---------- Bitacora en vivo ---------- */
+.audit-head { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.live-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.4rem 0.85rem; border-radius: 999px; background: #f1f5f9; color: var(--muted); }
+.live-indicator.on { background: #effdf4; color: #15803d; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; }
+.live-indicator.on .live-dot { background: var(--lime); animation: pulse 1.6s infinite; }
+.audit-stats .stat b { font-size: 1.4rem; }
+.audit-filters { margin-bottom: 0.4rem; }
+.check-inline { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+.audit-table td code { font-size: 0.72rem; color: var(--muted); background: none; padding: 0; }
+.audit-table tr.incident td { background: #fff7f7; }
+.audit-table tr.fresh td { animation: fresh-row 4s ease-out; }
+@keyframes fresh-row { 0%, 30% { background: #fef9c3; } 100% { background: transparent; } }
+.sev { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.45rem; vertical-align: middle; }
+.sev.good { background: var(--lime); }
+.sev.bad { background: var(--rose); box-shadow: 0 0 0 3px rgb(244 63 94 / 18%); }

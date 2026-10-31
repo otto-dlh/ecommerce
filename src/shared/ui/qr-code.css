@@ -1,0 +1,2 @@
+/* Código QR del MFA: siempre sobre fondo blanco y con borde suave para que las apps lo lean bien */
+.qr-code { display: block; width: 200px; height: 200px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }

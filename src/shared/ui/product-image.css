@@ -1,0 +1,20 @@
+/* Fotos de producto (autoalojadas) */
+.tile.photo, .float-tile.photo { background: #fff; }
+.tile.photo::before, .tile.photo::after { display: none; }
+.tile img, .float-tile img, .cart-line .emoji img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.45s cubic-bezier(.2,.8,.2,1); }
+.product-card:hover .tile img { transform: scale(1.06); }
+.float-tile { overflow: hidden; }
+.cart-line .emoji { overflow: hidden; }
+.cart-line .emoji span { font-size: 1.9rem; }
+
+/* Foto de producto en carga: el contenedor hace de skeleton hasta que la imagen termina de llegar */
+/* La variante .cart-line le gana al fondo propio de .cart-line .emoji (hoja del carrito, que carga después) */
+.photo.img-loading, .cart-line .photo.img-loading { background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-shine) 50%, var(--skeleton) 75%); background-size: 200% 100%; }
+.tile.img-loading, .cart-line .img-loading { animation: shimmer 1.4s ease-in-out infinite; }
+.tile.photo img, .float-tile.photo img, .cart-line .photo img { transition: opacity 0.3s ease, transform 0.45s cubic-bezier(.2,.8,.2,1); }
+.photo.img-loading img { opacity: 0; }
+
+/* Sin animaciones: color sólido para que el bloque siga siendo evidente */
+@media (prefers-reduced-motion: reduce) {
+  .photo.img-loading, .cart-line .photo.img-loading { background-image: none; background-color: var(--skeleton); }
+}

@@ -21,7 +21,7 @@
   status = 200
 
 # Cabeceras de seguridad para todo el sitio (hardening del frontend, T07 / T13 / ASVS v5.0.0-12.1.1).
-# La Content-Security-Policy se genera en dist/_headers al compilar (ver vite.config.js).
+# La Content-Security-Policy se genera en dist/_headers al compilar (ver tooling/vite/csp.mjs).
 [[headers]]
   for = "/*"
   [headers.values]

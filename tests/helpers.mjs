@@ -1,6 +1,6 @@
 // Utilidades compartidas por las pruebas: contenedor en memoria, contextos y sesiones de prueba.
-import { createContainer } from "../netlify/lib/infra/container.mjs";
-import { hashPassword } from "../netlify/lib/security/crypto.mjs";
+import { createContainer } from "../server/bootstrap/container.mjs";
+import { hashPassword } from "../server/shared/security/crypto.mjs";
 
 export const TEST_SECRET = "secreto-de-pruebas-".padEnd(48, "x");
 

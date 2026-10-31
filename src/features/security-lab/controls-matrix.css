@@ -1,0 +1,30 @@
+/* ---------- Tarjetas de control ---------- */
+.controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 0.9rem; }
+.control { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 1.05rem; display: flex; flex-direction: column; gap: 0.5rem; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+.control:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: #d8d2fb; }
+.control-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.control-id { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; padding: 0.2rem 0.55rem; border-radius: 8px; background: var(--ink); color: #fff; }
+.control h4 { margin: 0; font-size: 0.98rem; }
+.control p { margin: 0; font-size: 0.85rem; color: #475569; line-height: 1.5; }
+.control small { color: var(--violet); font-weight: 700; font-size: 0.74rem; }
+
+/* ---------- Matriz de controles ---------- */
+.matrix-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.matrix-toolbar .chips { margin-bottom: 0; }
+.matrix-toolbar .chip b { color: var(--violet); margin-right: 0.15rem; }
+.matrix-toolbar .chip.active b { color: #c4b5fd; }
+.control { padding: 0; scroll-margin-top: 90px; }
+.control:target, .control.open { border-color: #c4b5fd; box-shadow: 0 0 0 3px rgb(124 58 237 / 12%); }
+.control-toggle { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 0.5rem; width: 100%; padding: 1.05rem; cursor: pointer; border-radius: 18px; }
+.control-toggle:focus-visible { outline: 2px solid var(--violet); outline-offset: -2px; }
+.stride-tags { display: flex; gap: 0.25rem; }
+.stride { font-family: var(--font-display); font-size: 0.72rem; font-weight: 700; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: rgb(124 58 237 / 10%); color: var(--violet); }
+.control-risk, .control-defense { margin: 0; font-size: 0.86rem; color: #475569; line-height: 1.5; }
+.control-risk span, .control-defense span { display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.15rem; }
+.control-risk span { color: #e11d48; }
+.control-defense span { color: #16a34a; }
+.control-more { font-size: 0.8rem; font-weight: 700; color: var(--indigo); }
+.control-detail { padding: 0 1.05rem 1.05rem; display: flex; flex-direction: column; gap: 0.7rem; animation: rise 0.25s both; }
+.control-detail dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; margin: 0; font-size: 0.8rem; background: #f8f9fd; border-radius: 12px; padding: 0.7rem; }
+.control-detail dt { font-weight: 700; color: var(--muted); }
+.control-detail dd { margin: 0; overflow-wrap: anywhere; }

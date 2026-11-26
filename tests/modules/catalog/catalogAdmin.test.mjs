@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { newContainer, loginAs } from "../../helpers.mjs";
+import { newContainer, loginAs, anonCtx } from "../../helpers.mjs";
 import { ConflictError, ValidationError } from "../../../server/shared/domain/errors.mjs";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
@@ -25,7 +25,7 @@ test("cupones: el código es único, la coherencia se valida y el máximo no baj
   await assert.rejects(c.services.couponAdmin.update(admin, "VERANO15", { value: 150 }), /entre 1 y 100/);
   await c.repos.coupons.update("VERANO15", { uses: 4 });
   await assert.rejects(c.services.couponAdmin.update(admin, "VERANO15", { maxUses: 2 }), /no puede ser menor/);
-  const quote = await c.services.pricing.quote(null, [{ productId: "mochila", qty: 1 }], "verano15");
+  const quote = await c.services.pricing.quote(anonCtx(), { items: [{ productId: "mochila", qty: 1 }], coupon: "verano15" });
   assert.equal(quote.discount, Math.floor(42500 * 0.15));
 });
 

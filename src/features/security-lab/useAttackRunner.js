@@ -1,8 +1,13 @@
 import { useState } from "react";
+import { labApi } from "../../shared/api/index.js";
 
 /**
  * Ejecuta las pruebas del laboratorio (una o todas en orden) y guarda el resultado de cada una.
  * `context` ({ user, realtime }) se entrega a cada prueba al ejecutarla.
+ *
+ * Toda prueba ejecutada se reporta a la bitacora (`labApi.report`), incluso las que no tocan
+ * nuestra API: asi el laboratorio completo queda en Administracion → Auditoria. El reporte es
+ * informativo y no altera el resultado que se muestra.
  */
 export function useAttackRunner(attacks, context) {
   const [results, setResults] = useState({});
@@ -10,12 +15,14 @@ export function useAttackRunner(attacks, context) {
 
   const runOne = async (i) => {
     setResults((r) => ({ ...r, [i]: { running: true } }));
+    let res;
     try {
-      const res = await attacks[i].run(context);
-      setResults((r) => ({ ...r, [i]: res }));
+      res = await attacks[i].run(context);
     } catch (e) {
-      setResults((r) => ({ ...r, [i]: { pass: false, status: "error", detail: e.message } }));
+      res = { pass: false, status: "error", detail: e.message };
     }
+    setResults((r) => ({ ...r, [i]: res }));
+    await labApi.report(attacks[i], res);
   };
   const runAll = async () => {
     setRunning(true);

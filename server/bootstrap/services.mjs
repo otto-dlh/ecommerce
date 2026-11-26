@@ -13,6 +13,7 @@ import {
 } from "../modules/sales/index.mjs";
 import { createAddressService, createCustomerService } from "../modules/customers/index.mjs";
 import { createStatsService } from "../modules/reporting/index.mjs";
+import { createLabService } from "../modules/lab/index.mjs";
 import { createAlertService, createNotifier, createRealtimeChannels } from "../modules/notifications/index.mjs";
 
 /**
@@ -25,7 +26,7 @@ export function createServices({ repos, keyring, events, logger = console }) {
   const policy = createPolicyService({ policyStore: repos.policy, audit, events });
   const sessions = createSessionService({ sessions: repos.sessions, users: repos.users, policy, events });
   const orders = createOrderService({ orders: repos.orders, audit, events });
-  const pricing = createPricingService({ products: repos.products, coupons: repos.coupons });
+  const pricing = createPricingService({ products: repos.products, coupons: repos.coupons, audit });
   // Suscriptores del bus: los casos de uso no saben que existen el realtime ni las alertas
   const channels = createRealtimeChannels({ sessions: repos.sessions, realtime: repos.realtime, logger });
   createNotifier({ events, channels }).attach();
@@ -39,7 +40,7 @@ export function createServices({ repos, keyring, events, logger = console }) {
     orders,
     pricing,
     auth: createAuthService({ users: repos.users, mfaChallenges: repos.mfaChallenges, sessions, rateLimiter, audit, policy, keyring }),
-    catalog: createCatalogService({ products: repos.products, categories: repos.categories, reviews: repos.reviews }),
+    catalog: createCatalogService({ products: repos.products, categories: repos.categories, reviews: repos.reviews, audit }),
     checkout: createCheckoutService({ pricing, orders: repos.orders, orderService: orders, rateLimiter, audit, events }),
     payments: createPaymentService({ keyring, paymentEvents: repos.paymentEvents, orders: repos.orders, coupons: repos.coupons, audit, events }),
     reviews: createReviewService({ reviews: repos.reviews, products: repos.products, rateLimiter, audit, events }),
@@ -52,5 +53,6 @@ export function createServices({ repos, keyring, events, logger = console }) {
     couponAdmin: createCouponAdminService({ coupons: repos.coupons, audit, events }),
     productImages: createProductImageService({ products: repos.products, files: repos.files, audit, events, logger }),
     customers: createCustomerService({ users: repos.users, orders: repos.orders, addresses: repos.addresses, audit }),
+    lab: createLabService({ audit, rateLimiter }),
   };
 }

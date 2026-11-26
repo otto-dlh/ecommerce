@@ -1,6 +1,6 @@
 // Hardening · Cabeceras de seguridad HTTP
 export const securityHeaders = {
-  id: "Hardening", name: "Cabeceras de seguridad HTTP",
+  key: "cabeceras-seguridad", id: "Hardening", name: "Cabeceras de seguridad HTTP",
   goal: "Comprobar que el sitio le ordena al navegador bloquear ataques comunes: clickjacking, scripts de terceros, conexiones sin HTTPS y adivinar el tipo de un archivo.",
   steps: [
     ["lab", "Pide la página principal `/` sin caché, como cualquier navegador."],
@@ -8,8 +8,10 @@ export const securityHeaders = {
     ["servidor", "Suma la CSP estricta que `tooling/vite/csp.mjs` generó en `dist/_headers` al compilar: scripts y estilos solo del propio sitio; imágenes, API y WebSocket solo del origen exacto del proyecto InsForge; `frame-ancestors 'none'`."],
     ["lab", "Revisa que la respuesta traiga las 6 cabeceras."],
     ["navegador", "Con esas reglas se niega a mostrar la tienda dentro de un `<iframe>` ajeno, no ejecuta scripts de otros dominios y no vuelve a conectarse por HTTP."],
+    ["lab", "Reporta el resultado a `POST /api/lab/runs`: las cabeceras las pone el hosting (Netlify), no la API, así que el único registro posible es el del laboratorio."],
   ],
   expect: "`200` con las 6 cabeceras. En `pnpm dev` se omite, porque las cabeceras las aplica Netlify: verifícala con `pnpm serve` o en el sitio desplegado.",
+  evidence: "Administración → Auditoría: el registro del laboratorio (lo deja el propio laboratorio: las cabeceras las pone el hosting, no la API)",
   code: "netlify.toml · tooling/vite/csp.mjs",
   run: async () => {
     // El servidor de desarrollo de Vite no aplica netlify.toml ni puede usar la CSP (recarga en caliente)

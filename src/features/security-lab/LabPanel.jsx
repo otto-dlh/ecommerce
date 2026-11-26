@@ -30,7 +30,11 @@ export function LabPanel({ attacks, user, results, running, onRun, onRunAll }) {
         Abre «Ver pasos» en cualquier prueba para seguir, en orden, lo que hace el atacante y cómo responde la tienda en cada momento.
         {user ? ` Sesión actual: ${user.email}.` : <> Algunas pruebas requieren <Link to="/login?next=/seguridad">iniciar sesión</Link> con una cuenta de cliente (puedes <Link to="/registro">crear una</Link>).</>}
       </p>
-      <p className="hint">Cada intento bloqueado queda registrado. Con la cuenta de administrador puedes verlos aparecer en tiempo real en <Link to="/admin/auditoria">Administración → Auditoría</Link>.</p>
+      <p className="hint">
+        Toda prueba que ejecutes queda registrada en la bitácora con su amenaza y su resultado, y las que llegan a nuestra API suman además
+        el registro del control que las bloqueó. Con la cuenta de administrador puedes verlos aparecer en tiempo real en{" "}
+        <Link to="/admin/auditoria">Administración → Auditoría</Link>.
+      </p>
       <div className="scroll-x lab-scroll"><table className="table">
         <thead><tr><th>Amenaza</th><th>Prueba</th><th>HTTP</th><th>Resultado</th><th></th></tr></thead>
         <tbody>

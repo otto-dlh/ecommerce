@@ -90,6 +90,10 @@ export const ENDPOINTS = Object.freeze({
   reporting: group({
     stats: endpoint("GET", "/api/admin/stats"),
   }),
+  // Laboratorio de seguridad: cada prueba ejecutada queda en la bitacora de auditoria
+  lab: group({
+    run: endpoint("POST", "/api/lab/runs"),
+  }),
   // Proveedor externo simulado (otra funcion, otra frontera de confianza): la tarjeta nunca va a /api
   paymentGateway: group({
     pay: endpoint("POST", "/sandbox/pay"),

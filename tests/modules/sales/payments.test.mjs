@@ -26,7 +26,7 @@ test("T09: un aviso firmado marca el pedido como pagado y canjea el cupon", asyn
   const paid = await c.repos.orders.findById(order.id);
   assert.equal(paid.status, "pagado");
   assert.equal(paid.payment.last4, "4242");
-  await assert.rejects(c.services.pricing.quote(ctx.user, [{ productId: "mochila", qty: 1 }], "BIENVENIDA10"), /Ya utilizaste/);
+  await assert.rejects(c.services.pricing.quote(ctx, { items: [{ productId: "mochila", qty: 1 }], coupon: "BIENVENIDA10" }), /Ya utilizaste/);
 });
 
 test("T09: firma falsa o vencida se rechaza y queda auditada", async () => {

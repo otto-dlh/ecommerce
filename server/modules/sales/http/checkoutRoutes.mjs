@@ -4,7 +4,7 @@ export function registerCheckoutRoutes({ add }, { pricing, checkout, orders }) {
   add("GET", "/api/coupons", {}, async () => ({ coupons: await pricing.listPublicCoupons() }));
 
   // Cotizacion: el frontend muestra siempre los importes que calcula el servidor
-  add("POST", "/api/cart/quote", {}, (ctx) => pricing.quote(ctx.user, ctx.body.items, ctx.body.coupon || null));
+  add("POST", "/api/cart/quote", {}, (ctx) => pricing.quote(ctx, ctx.body));
 
   add("POST", "/api/orders", { auth: true }, async (ctx) => {
     const order = await checkout.placeOrder(ctx, ctx.body);

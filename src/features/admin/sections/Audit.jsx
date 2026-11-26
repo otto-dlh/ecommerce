@@ -98,9 +98,9 @@ export default function Audit() {
       </div>
 
       <div className="stats audit-stats">
-        {AUDIT_COUNTERS.map(([label, matches]) => {
+        {AUDIT_COUNTERS.map(([label, matches, isAlarm = true]) => {
           const n = entries.filter(matches).length;
-          return <div key={label} className={`stat ${n && label !== "Incidentes" ? "alarm" : ""}`}><span>{label}</span><b>{n}</b></div>;
+          return <div key={label} className={`stat ${n && isAlarm ? "alarm" : ""}`}><span>{label}</span><b>{n}</b></div>;
         })}
       </div>
 

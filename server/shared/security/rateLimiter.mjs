@@ -15,6 +15,7 @@ export const BUCKETS = Object.freeze({
   REVIEW: "review",
   SANDBOX_PAY: "sandbox-pay",
   UPLOAD: "upload",
+  LAB: "lab",
 });
 
 const keyFor = (identity) => sha256(String(identity)).slice(0, 40);

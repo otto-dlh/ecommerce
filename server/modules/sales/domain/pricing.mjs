@@ -10,6 +10,25 @@ export const FREE_SHIPPING_FROM = 30000;
 export const MAX_CART_LINES = 20;
 export const MAX_UNITS_PER_PRODUCT = 10;
 
+// Campos de importe que el servidor NUNCA lee del cliente: si llegan, alguien intento fijar el precio.
+const AMOUNT_FIELDS = ["price", "unitPrice", "lineTotal", "subtotal", "discount", "shipping", "total"];
+
+/**
+ * Nombres de los campos de importe que venian en la peticion y se descartaron.
+ * El calculo no cambia (los importes salen del catalogo): sirve para dejar el intento en la bitacora.
+ * @returns {string[]} ordenados y sin repetir
+ */
+export function tamperedFields(body) {
+  const found = new Set();
+  const scan = (obj) => {
+    if (!obj || typeof obj !== "object") return;
+    for (const field of AMOUNT_FIELDS) if (obj[field] !== undefined) found.add(field);
+  };
+  scan(body);
+  if (Array.isArray(body?.items)) body.items.forEach(scan);
+  return [...found].sort();
+}
+
 /** Normaliza el carrito: solo productId y qty; cualquier precio enviado por el cliente se ignora. */
 export function parseItems(items) {
   if (!Array.isArray(items) || items.length < 1 || items.length > MAX_CART_LINES) {

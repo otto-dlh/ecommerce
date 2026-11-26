@@ -5,6 +5,7 @@ export { catalogApi, catalogAdminApi } from "./catalog.js";
 export { cartApi, ordersApi, salesAdminApi } from "./sales.js";
 export { addressesApi, customersApi } from "./customers.js";
 export { auditApi, reportingApi } from "./panel.js";
+export { labApi } from "./lab.js";
 export { paymentGatewayApi } from "./paymentGateway.js";
 export { setCsrf } from "./httpClient.js";
 // Solo para el laboratorio de seguridad: peticiones crudas (malformadas a proposito) sobre rutas del catalogo

@@ -1,5 +1,6 @@
 // Checkout: cotiza con datos del servidor y reserva stock de forma atomica (T02, T14).
 import { randomUUID } from "node:crypto";
+import { ConflictError } from "../../../shared/domain/errors.mjs";
 import { parseAddress } from "../domain/addresses.mjs";
 import { PAYMENT_WINDOW_MS } from "../domain/orderStateMachine.mjs";
 import { BUCKETS } from "../../../shared/security/rateLimiter.mjs";
@@ -7,14 +8,32 @@ import { BUCKETS } from "../../../shared/security/rateLimiter.mjs";
 const toOrderLine = ({ productId, name, unitPrice, qty, lineTotal }) => ({ productId, name, unitPrice, qty, lineTotal });
 
 export function createCheckoutService({ pricing, orders, orderService, rateLimiter, audit, events }) {
+  /**
+   * Reserva el stock de forma atomica. Si otra compra se llevo la ultima unidad, el pedido NO se crea:
+   * ese rechazo tambien se audita, porque es la prueba de que el bloqueo de inventario funciono.
+   */
+  async function reserve(ctx, draft) {
+    try {
+      return await orders.placeOrder(draft);
+    } catch (err) {
+      if (err instanceof ConflictError) {
+        await audit.record(ctx, "order.rejected", {
+          outcome: "rejected",
+          details: { motivo: err.message, productos: draft.items.map((item) => item.productId) },
+        });
+      }
+      throw err;
+    }
+  }
+
   async function placeOrder(ctx, body) {
     await rateLimiter.hit(ctx, BUCKETS.CHECKOUT, ctx.user.id, 10, 600);
     const address = parseAddress(body.address);
     // Libera reservas vencidas antes de competir por el stock
     await orderService.expireOverdue();
-    const quote = await pricing.quote(ctx.user, body.items, body.coupon || null);
+    const quote = await pricing.quote(ctx, body);
     const now = Date.now();
-    const order = await orders.placeOrder({
+    const order = await reserve(ctx, {
       id: randomUUID(),
       userId: ctx.user.id,
       items: quote.lines.map(toOrderLine),

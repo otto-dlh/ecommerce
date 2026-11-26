@@ -3,7 +3,7 @@ import { can } from "../../../shared/lib/permissions.js";
 
 // T04 · Escalar privilegios: listar usuarios como cliente
 export const listUsersAsClient = {
-  id: "T04", name: "Escalar privilegios: listar usuarios como cliente",
+  key: "listar-usuarios", id: "T04", name: "Escalar privilegios: listar usuarios como cliente",
   goal: "Usar una función de administrador llamando directo a la API, aunque el menú no le muestre esa opción a un cliente.",
   steps: [
     ["atacante", "Con sesión de cliente, llama directo a `GET /api/admin/users`, que devuelve todas las cuentas con su rol. No pasa por la interfaz: ocultar el botón del menú no protege nada si la API no verifica."],
@@ -13,7 +13,7 @@ export const listUsersAsClient = {
     ["servidor", "Responde `403` sin llegar a ejecutar la ruta: no se lee ningún usuario."],
   ],
   expect: "`403` como cliente u operador, `401` sin sesión y `200` como administrador o auditor (solo lectura).",
-  evidence: "Administración → Auditoría: «Acceso denegado»",
+  evidence: "Administración → Auditoría: «Acceso denegado» y el registro del laboratorio con esta prueba",
   code: "server/http/pipeline.mjs · server/modules/identity/domain/permissions.mjs",
   run: async ({ user }) => {
     const r = await request(ENDPOINTS.identity.users.url());

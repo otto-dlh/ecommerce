@@ -5,8 +5,9 @@ import { registerSalesRoutes } from "../modules/sales/index.mjs";
 import { registerCustomerRoutes } from "../modules/customers/index.mjs";
 import { registerAuditRoutes } from "../modules/audit/index.mjs";
 import { registerReportingRoutes } from "../modules/reporting/index.mjs";
+import { registerLabRoutes } from "../modules/lab/index.mjs";
 
-const MODULE_ROUTES = [registerIdentityRoutes, registerCatalogRoutes, registerSalesRoutes, registerCustomerRoutes, registerAuditRoutes, registerReportingRoutes];
+const MODULE_ROUTES = [registerIdentityRoutes, registerCatalogRoutes, registerSalesRoutes, registerCustomerRoutes, registerAuditRoutes, registerReportingRoutes, registerLabRoutes];
 
 export function registerRoutes(router, services) {
   for (const register of MODULE_ROUTES) register(router, services);

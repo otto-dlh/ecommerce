@@ -44,6 +44,7 @@ Las hace cumplir `tests/architecture.test.mjs` en cada `pnpm test`: romper una r
 | `audit` | Bitácora *append-only* con HMAC por registro y verificación de integridad | — |
 | `reporting` | Resumen del panel: ventas, inventario y alertas de seguridad de 24 h | `sales`, `catalog` |
 | `notifications` | Avisos realtime (señales sin datos) y alertas por rol | `identity` |
+| `lab` | Laboratorio de seguridad: deja en la bitácora cada prueba ejecutada, incluidas las que nuestra API no puede ver | — |
 
 Dos mecanismos conectan los módulos sin acoplarlos:
 
@@ -102,7 +103,7 @@ src/
 
   Cambiar un endpoint toca una línea de `endpoints.js`. Dos pruebas lo hacen cumplir: la de arquitectura (no hay rutas fuera del catálogo y solo la capa usa el transporte) y `tests/contract/apiEndpoints.test.mjs` (cada endpoint del catálogo existe en el router del servidor con el mismo método). Los ataques del laboratorio son la excepción deliberada: mandan peticiones crudas y malformadas, pero toman la ruta del catálogo.
 - **Cascada CSS:** cada módulo importa su hoja al final de sus imports, así la hoja de una dependencia siempre carga antes que la del módulo que la usa. Cada ajuste móvil vive junto a su regla base.
-- **Laboratorio de seguridad:** `features/security-lab/attacks/` tiene un archivo por ataque, y `attacks/index.js` define el orden. `useAttackRunner` los ejecuta y `LabSteps` dibuja la línea de tiempo de cada uno.
+- **Laboratorio de seguridad:** `features/security-lab/attacks/` tiene un archivo por ataque, y `attacks/index.js` define el orden. `useAttackRunner` los ejecuta y `LabSteps` dibuja la línea de tiempo de cada uno. Cada ataque declara una `key` estable: `useAttackRunner` reporta con ella el resultado de toda prueba ejecutada (`labApi.report` → `POST /api/lab/runs`), de modo que también las que no pasan por la API quedan en la bitácora. El servidor valida esa clave contra `server/modules/lab/domain/labTests.mjs`, que es también donde viven el nombre de cada prueba y la acción `lab.attack` con la que quedan en la bitácora. El panel arma el texto del evento con esos datos (`labEventLabel` en `src/features/admin/auditLabels.js`), así que cada prueba se lee sin abrir el detalle; `tests/modules/lab/labAudit.test.mjs` verifica que las listas y la acción no se separen, y comprueba el texto exacto del mensaje.
 - **Permisos en la interfaz:** solo ocultan opciones. La autorización real la decide siempre la API.
 
 ## Decisiones de diseño

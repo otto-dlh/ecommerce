@@ -4,7 +4,7 @@ import { json } from "./helpers.js";
 
 // T04 · Escribir sin permiso (auditor ajusta inventario)
 export const writeWithoutPermission = {
-  id: "T04", name: "Escribir sin permiso (auditor ajusta inventario)",
+  key: "escritura-sin-permiso", id: "T04", name: "Escribir sin permiso (auditor ajusta inventario)",
   goal: "Que una cuenta de solo lectura (auditor) o un cliente modifique el inventario llamando directamente a la API.",
   steps: [
     ["atacante", "Con sesión de auditor (o de cliente), envía `POST /api/admin/products/gorra/stock` para ajustar el inventario."],
@@ -13,7 +13,7 @@ export const writeWithoutPermission = {
     ["servidor", "Responde `403` sin ejecutar nada."],
   ],
   expect: "`403` como auditor o cliente, `401` sin sesión. Con administrador u operador el permiso existe (acceso legítimo).",
-  evidence: "Administración → Auditoría: «Acceso denegado»",
+  evidence: "Administración → Auditoría: «Acceso denegado» y el registro del laboratorio con esta prueba",
   code: "server/modules/catalog/http/catalogAdminRoutes.mjs · server/modules/identity/domain/permissions.mjs",
   run: async ({ user }) => {
     // Cuerpo invalido a proposito: aun con permiso, nada se modifica (la validacion lo rechaza)

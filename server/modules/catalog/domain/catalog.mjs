@@ -7,6 +7,21 @@ export const LOW_STOCK_THRESHOLD = 3;
 // Solo rutas locales autoalojadas: no se aceptan URLs externas (CSP y privacidad del visitante)
 const LOCAL_IMAGE = /^\/products\/[a-z0-9-]+\.(jpg|png|webp)$/;
 
+// Senales de un intento de inyeccion en el buscador. La busqueda es literal y nunca arma una consulta,
+// asi que esto no protege nada: sirve para que el intento quede en la bitacora (deteccion, no defensa).
+const INJECTION_SIGNALS = [
+  /\bor\b\s+['"\d]?\s*\d+\s*=\s*\d+/i, //          ' OR 1=1
+  /(--|#|\/\*)/, //                                comentarios SQL
+  /\b(union\s+select|drop\s+table|insert\s+into|delete\s+from|alter\s+table)\b/i,
+  /[;|]\s*(select|drop|shutdown|cat|ls|rm)\b/i, // encadenar comandos
+  /<\s*(script|img|svg|iframe)\b/i, //             carga XSS
+  /\$(where|ne|gt|regex)\b/i, //                   operadores NoSQL
+  /\.\.\//, //                                     recorrido de rutas
+];
+
+/** Si el texto buscado trae marcas tipicas de inyeccion (SQL, NoSQL, XSS o rutas). */
+export const looksLikeInjection = (q) => Boolean(q) && INJECTION_SIGNALS.some((signal) => signal.test(q));
+
 /** Parametros de busqueda publicos. La busqueda se trata como texto literal (T08). */
 export function parseCatalogQuery(params) {
   return {

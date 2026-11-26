@@ -2,14 +2,16 @@ import { SKIPPED } from "./helpers.js";
 
 // T09 · Publicar un aviso falso en vivo
 export const publishFakeEvent = {
-  id: "T09", name: "Publicar un aviso falso en vivo",
+  key: "evento-falso", id: "T09", name: "Publicar un aviso falso en vivo",
   goal: "Enviar desde el navegador un evento realtime falso (por ejemplo «cambió el precio» o «pedido pagado») para engañar a otros usuarios.",
   steps: [
     ["atacante", "Con el socket abierto, publica en el canal público `catalog` un evento `catalog.products` inventado."],
     ["servidor", "`realtime.messages` tiene RLS activado y ninguna política de INSERT: ningún cliente puede publicar."],
     ["servidor", "Responde `REALTIME_UNAUTHORIZED`. Los avisos reales solo los emite la API mediante `rt_publish_many`, que solo puede ejecutar el servidor."],
+    ["lab", "La publicación se intenta por WebSocket contra InsForge, fuera de nuestra API: el laboratorio reporta el resultado a `POST /api/lab/runs` para que el intento quede en la bitácora con el resultado de la prueba."],
   ],
   expect: "Publicación rechazada (`REALTIME_UNAUTHORIZED`).",
+  evidence: "Administración → Auditoría: el registro del laboratorio (el rechazo lo hace la política RLS del realtime; nuestra API no ve este intento)",
   code: "migrations/*_tienda-schema.sql (sección 8) · src/shared/realtime/realtimeClient.js",
   run: async ({ realtime }) => {
     if (!realtime.enabled) return SKIPPED;

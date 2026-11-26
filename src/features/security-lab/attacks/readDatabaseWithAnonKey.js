@@ -2,7 +2,7 @@ import { INSFORGE, SKIPPED } from "./helpers.js";
 
 // T12 · Leer la base de datos con la clave pública
 export const readDatabaseWithAnonKey = {
-  id: "T12", name: "Leer la base de datos con la clave pública",
+  key: "lectura-clave-publica", id: "T12", name: "Leer la base de datos con la clave pública",
   goal: "Usar la clave pública de InsForge (está en el JavaScript del sitio: es pública por diseño) para leer tablas directamente, saltándose la API.",
   steps: [
     ["atacante", "Copia la clave anónima que el sitio usa para el realtime; cualquiera puede verla en el código que descarga el navegador."],
@@ -10,8 +10,10 @@ export const readDatabaseWithAnonKey = {
     ["servidor", "InsForge ejecuta la consulta con el rol `anon` de PostgreSQL."],
     ["servidor", "Todas las tablas tienen RLS activado sin políticas y se les revocaron los permisos a `anon` y `authenticated`: PostgreSQL responde `permission denied` (42501)."],
     ["servidor", "Solo la API de la tienda, con la clave de administrador que vive en el servidor, puede leer y escribir datos."],
+    ["lab", "El ataque fue directo a InsForge y nunca pasó por nuestra API: el laboratorio reporta el resultado a `POST /api/lab/runs` para que el intento quede en la bitácora con el resultado de la prueba."],
   ],
   expect: "Rechazo con `permission denied`: la clave pública no sirve para leer datos.",
+  evidence: "Administración → Auditoría: el registro del laboratorio (el rechazo lo hace PostgreSQL; nuestra API no ve este intento)",
   code: "migrations/*_tienda-schema.sql (sección 6) · server/infra/insforge/db.mjs",
   run: async () => {
     if (!INSFORGE.url) return SKIPPED;

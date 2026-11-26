@@ -2,7 +2,7 @@ import { ENDPOINTS, request } from "../../../shared/api/index.js";
 
 // T09 · Webhook de pago falsificado
 export const forgedWebhook = {
-  id: "T09", name: "Webhook de pago falsificado",
+  key: "webhook-falsificado", id: "T09", name: "Webhook de pago falsificado",
   goal: "Marcar un pedido como pagado sin pagar, haciéndose pasar por la pasarela de pagos.",
   steps: [
     ["atacante", "Arma un aviso `payment.succeeded` con un identificador de evento inventado."],
@@ -14,7 +14,7 @@ export const forgedWebhook = {
     ["servidor", "Responde `401` y se detiene. Ni siquiera llega a las defensas siguientes: que el evento no se haya procesado antes y que el monto y la moneda coincidan con los del pedido."],
   ],
   expect: "`401` «Webhook rechazado»; el pedido no cambia de estado.",
-  evidence: "Administración → Auditoría: «Aviso de pago rechazado»",
+  evidence: "Administración → Auditoría: «Aviso de pago rechazado» y el registro del laboratorio con esta prueba",
   code: "server/modules/sales/application/paymentService.mjs · server/modules/sales/domain/payments.mjs",
   run: async () => {
     const fake = JSON.stringify({ id: "evt_falsificado123456", type: "payment.succeeded", data: { orderId: "x", amount: 1, currency: "GTQ" } });

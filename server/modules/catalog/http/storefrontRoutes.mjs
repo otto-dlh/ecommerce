@@ -1,7 +1,7 @@
 // Controladores publicos del catalogo y de las resenas de clientes.
 
 export function registerStorefrontRoutes({ add }, { catalog, reviews }) {
-  add("GET", "/api/products", {}, async (ctx) => ({ products: await catalog.listProducts(ctx.query) }));
+  add("GET", "/api/products", {}, async (ctx) => ({ products: await catalog.listProducts(ctx) }));
   add("GET", "/api/products/:id", {}, (ctx) => catalog.getProduct(ctx.params.id));
   add("GET", "/api/categories", {}, async () => ({ categories: await catalog.listCategories() }));
 

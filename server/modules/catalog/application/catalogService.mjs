@@ -1,13 +1,13 @@
 // Catalogo publico: categorias, busqueda de productos y detalle con resenas visibles.
 import { NotFoundError } from "../../../shared/domain/errors.mjs";
 import * as v from "../../../shared/domain/validate.mjs";
-import { parseCatalogQuery, searchProducts, publicProduct, publicCategory } from "../domain/catalog.mjs";
+import { parseCatalogQuery, searchProducts, publicProduct, publicCategory, looksLikeInjection } from "../domain/catalog.mjs";
 
 const byOrder = (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "es");
 
 export const publicReview = ({ id, userName, rating, text, createdAt }) => ({ id, userName, rating, text, createdAt });
 
-export function createCatalogService({ products, categories, reviews }) {
+export function createCatalogService({ products, categories, reviews, audit }) {
   async function categoriesById() {
     return new Map((await categories.list()).map((c) => [c.id, c]));
   }
@@ -17,8 +17,16 @@ export function createCatalogService({ products, categories, reviews }) {
     return all.filter((c) => c.active).sort(byOrder).map(publicCategory);
   }
 
-  async function listProducts(searchParams) {
-    const query = parseCatalogQuery(searchParams);
+  /**
+   * Busqueda publica del catalogo. El texto se compara literalmente (nunca arma una consulta),
+   * pero si trae marcas de inyeccion el intento queda en la bitacora.
+   * @param {object} ctx contexto de la solicitud; ctx.query trae los parametros
+   */
+  async function listProducts(ctx) {
+    const query = parseCatalogQuery(ctx.query);
+    if (looksLikeInjection(query.q)) {
+      await audit.record(ctx, "search.suspicious", { outcome: "rejected", details: { busqueda: query.q } });
+    }
     const [all, cats] = await Promise.all([products.list(), categoriesById()]);
     return searchProducts(all, query).map((p) => publicProduct(p, cats));
   }

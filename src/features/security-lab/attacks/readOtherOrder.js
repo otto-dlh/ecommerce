@@ -3,7 +3,7 @@ import { can } from "../../../shared/lib/permissions.js";
 
 // T04 · Leer el pedido de otro cliente (IDOR)
 export const readOtherOrder = {
-  id: "T04", name: "Leer el pedido de otro cliente (IDOR)",
+  key: "pedido-ajeno", id: "T04", name: "Leer el pedido de otro cliente (IDOR)",
   goal: "Ver la dirección, el teléfono y las compras de otra persona cambiando el identificador del pedido en la URL (referencia directa insegura a objetos).",
   steps: [
     ["atacante", "Inicia sesión con una cuenta normal de cliente (sirve una recién creada en «Crear cuenta»)."],
@@ -14,7 +14,7 @@ export const readOtherOrder = {
     ["servidor", "Responde `404` «Pedido no encontrado», igual que si no existiera: el atacante no puede confirmar que el pedido existe."],
   ],
   expect: "`404` como cliente y `401` sin sesión. Con cliente2, operador, auditor o administrador responde `200` porque el acceso es legítimo.",
-  evidence: "Administración → Auditoría: «Acceso denegado»",
+  evidence: "Administración → Auditoría: «Acceso denegado» y el registro del laboratorio con esta prueba",
   code: "server/modules/sales/application/orderService.mjs · server/modules/identity/domain/permissions.mjs",
   run: async ({ user }) => {
     const r = await request(ENDPOINTS.sales.order.url({ id: "demo-pedido-cliente2" }));

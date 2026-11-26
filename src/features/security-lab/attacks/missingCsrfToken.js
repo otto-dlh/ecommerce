@@ -2,7 +2,7 @@ import { ENDPOINTS, request } from "../../../shared/api/index.js";
 
 // T13 · Petición de cambio sin token CSRF
 export const missingCsrfToken = {
-  id: "T13", name: "Petición de cambio sin token CSRF",
+  key: "sin-token-csrf", id: "T13", name: "Petición de cambio sin token CSRF",
   goal: "Que una página maliciosa haga cambios en la cuenta de la víctima aprovechando que tiene la sesión abierta (CSRF).",
   steps: [
     ["atacante", "Con la sesión iniciada, envía `POST /api/addresses` para guardar una dirección nueva, pero sin la cabecera `X-CSRF-Token`, como haría una página maliciosa que no conoce el token."],
@@ -15,7 +15,7 @@ export const missingCsrfToken = {
     ["servidor", "Responde `403` sin crear la dirección."],
   ],
   expect: "`403` «Token CSRF inválido o ausente». Sin sesión responde `401`.",
-  evidence: "Administración → Auditoría: «Petición sin token CSRF»",
+  evidence: "Administración → Auditoría: «Petición sin token CSRF» y el registro del laboratorio con esta prueba",
   code: "server/http/csrf.mjs · server/http/pipeline.mjs",
   run: async ({ user }) => {
     const r = await request(ENDPOINTS.customers.createAddress.url(), { method: "POST", csrf: false, body: { name: "CSRF", line1: "Calle falsa 123", city: "X", phone: "55555555" } });

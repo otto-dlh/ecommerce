@@ -1,16 +1,35 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { newContainer, loginAs, captureEvents } from "../../helpers.mjs";
-import { ConflictError, NotFoundError, ForbiddenError } from "../../../server/shared/domain/errors.mjs";
+import { newContainer, loginAs, captureEvents, anonCtx } from "../../helpers.mjs";
+import { ConflictError, NotFoundError, ForbiddenError, ValidationError } from "../../../server/shared/domain/errors.mjs";
 import { DEMO_FOREIGN_ORDER_ID } from "../../../server/bootstrap/seedData.mjs";
 
 const ADDRESS = { name: "Prueba", line1: "Laboratorio 123", city: "Guatemala", phone: "55555555" };
 const buy = (c, ctx, items, extra = {}) => c.services.checkout.placeOrder(ctx, { items, address: ADDRESS, ...extra });
 
-test("T02: la cotizacion ignora el precio manipulado", async () => {
+test("T02: la cotizacion ignora el precio manipulado y deja el intento en la bitacora", async () => {
   const c = await newContainer();
-  const quote = await c.services.pricing.quote(null, [{ productId: "cafe-huehue", qty: 1, price: 1 }], null);
+  const quote = await c.services.pricing.quote(anonCtx(), { items: [{ productId: "cafe-huehue", qty: 1, price: 1, unitPrice: 1 }], total: 1 });
   assert.equal(quote.subtotal, 9500);
+  const [entry] = (await c.services.audit.list()).filter((e) => e.action === "quote.tampered");
+  assert.ok(entry, "el intento de fijar el precio queda registrado");
+  assert.deepEqual(entry.details.campos, ["price", "total", "unitPrice"]);
+  assert.equal(entry.outcome, "rejected");
+});
+
+test("T02: una cantidad invalida se rechaza y queda en la bitacora", async () => {
+  const c = await newContainer();
+  await assert.rejects(c.services.pricing.quote(anonCtx(), { items: [{ productId: "cafe-huehue", qty: -5 }] }), ValidationError);
+  const [entry] = (await c.services.audit.list()).filter((e) => e.action === "quote.rejected");
+  assert.ok(entry, "la validacion rechazada queda registrada");
+  assert.match(entry.details.motivo, /entre 1 y 10/);
+});
+
+test("una cotizacion normal del carrito no ensucia la bitacora", async () => {
+  const c = await newContainer();
+  await c.services.pricing.quote(anonCtx(), { items: [{ productId: "cafe-huehue", qty: 2 }] });
+  const ruido = (await c.services.audit.list()).filter((e) => e.action.startsWith("quote."));
+  assert.deepEqual(ruido, [], "solo se audita lo anomalo");
 });
 
 test("T14: dos compras simultaneas de la ultima unidad, solo una gana", async () => {
@@ -20,6 +39,9 @@ test("T14: dos compras simultaneas de la ultima unidad, solo una gana", async ()
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   assert.ok(results.find((r) => r.status === "rejected").reason instanceof ConflictError);
   assert.equal((await c.repos.products.findById("edicion-limitada")).stock, 0);
+  const acciones = (await c.services.audit.list()).map((e) => e.action);
+  assert.ok(acciones.includes("order.created"), "la compra que gano queda registrada");
+  assert.ok(acciones.includes("order.rejected"), "la que perdio la carrera tambien");
 });
 
 test("T14: si una linea no tiene stock, no se reserva ninguna", async () => {

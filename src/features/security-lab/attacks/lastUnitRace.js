@@ -3,7 +3,7 @@ import { json } from "./helpers.js";
 
 // T14 · Dos compras simultáneas de la última unidad
 export const lastUnitRace = {
-  id: "T14", name: "Dos compras simultáneas de la última unidad",
+  key: "ultima-unidad", id: "T14", name: "Dos compras simultáneas de la última unidad",
   needsClient: true,
   goal: "Comprar la última unidad desde dos peticiones simultáneas para que ambas se confirmen (condición de carrera que provoca sobreventa).",
   steps: [
@@ -13,9 +13,11 @@ export const lastUnitRace = {
     ["servidor", "A obtiene el bloqueo primero: ve «queda 1», descuenta la unidad, guarda el pedido y confirma la transacción (`201`)."],
     ["servidor", "B esperaba ese bloqueo; al obtenerlo ya lee «queda 0», así que la función lanza `out_of_stock` y PostgreSQL revierte todo lo de B."],
     ["servidor", "La API traduce el código a `409` «Sin existencias suficientes». Si B hubiera traído varios productos, ninguno quedaría reservado: todo o nada."],
+    ["bitacora", "Registra «Pedido creado» para A y «Pedido rechazado» para B, con el motivo: la sobreventa evitada queda documentada."],
     ["lab", "Cancela el pedido de prueba que se creó para devolver la unidad al inventario."],
   ],
   expect: "`201 / 409` (o `409 / 409` si ya no quedaba stock); nunca dos `201`, también en local.",
+  evidence: "Administración → Auditoría: «Pedido creado» (la que ganó), «Pedido rechazado» (la que perdió) y el registro del laboratorio con esta prueba",
   code: "migrations/*_ascii-error-codes.sql (place_order) · server/infra/insforge/sales.mjs",
   run: async ({ user }) => {
     if (!user) return { skipped: true, status: "—", detail: "Requiere sesión: inicia sesión como cliente para ejecutarla" };

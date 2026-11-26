@@ -132,6 +132,28 @@ Tarjetas de prueba: `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002` (re
   - **Auditoría** con verificación HMAC de cada registro.
 - **Alertas en vivo por rol** (campana con contador, historial de la sesión y avisos emergentes; ver la tabla siguiente).
 - Página `/seguridad`: matriz de controles, diagrama de fronteras de confianza y laboratorio que ejecuta los ataques del modelo STRIDE contra la API, incluidos los de la base de datos y el canal realtime.
+  **Toda prueba que se ejecute queda en la bitácora** (ver *El laboratorio en la auditoría*).
+
+### El laboratorio en la auditoría
+
+Las 17 pruebas de `/seguridad` dejan rastro en **Administración → Auditoría**, en dos capas que no se confunden entre sí:
+
+| Capa | Acción en la bitácora | Qué pruebas cubre |
+|---|---|---|
+| El control que bloqueó el ataque (verdad del servidor) | `authz.denied`, `csrf.token_rejected`, `payment.webhook`, `auth.login`, `ratelimit.block`, `quote.tampered`, `quote.rejected`, `search.suspicious`, `order.rejected` | Las 10 que llegan a nuestra API |
+| El reporte del propio laboratorio | `lab.attack` (una por ejecución) | Las 17, incluidas las 7 que nuestra API no puede ver |
+
+Por qué hacen falta las dos: siete pruebas no pasan por la API —cuatro atacan InsForge directamente (RLS de PostgreSQL y del realtime) y tres se resuelven dentro del navegador (cookie `HttpOnly`, XSS renderizado, cabeceras del hosting)—, así que ningún control del servidor puede registrarlas. Para esas, el laboratorio reporta el resultado a `POST /api/lab/runs`.
+
+Cada prueba se lee sola, sin abrir el detalle, porque el evento es la amenaza, la prueba y su resultado:
+
+```
+T02 · Enviar precio manipulado en la cotización — bloqueado
+T07 · Carga XSS renderizada — NO BLOQUEADO
+T14 · Dos compras simultáneas de la última unidad — no se ejecutó
+```
+
+Ese reporte **lo envía el navegador, así que es dato y no verdad**, y está acotado a conciencia: solo acepta una clave de la lista blanca del servidor (`server/modules/lab/domain/labTests.mjs`), el nombre y la amenaza los pone el servidor (el cuerpo de la petición no escribe texto libre en la bitácora), el código de estado se sanea, hay límite por IP y la acción `lab.attack` está separada de los eventos que levantan los controles reales. Solo el ataque que **no** fue bloqueado es un incidente (`outcome: failure`); una prueba omitida se registra sin serlo.
 
 ### Alertas por rol
 
@@ -153,7 +175,7 @@ Monolito modular con **puertos y adaptadores**: cada funcionalidad es un módulo
 ```
 server/                         Backend: no sabe que corre en Netlify
   config.mjs                    Único lugar que lee variables de entorno; las valida al arrancar
-  modules/<módulo>/             identity · catalog · sales · customers · audit · reporting · notifications
+  modules/<módulo>/             identity · catalog · sales · customers · audit · reporting · notifications · lab
     domain/                     Reglas puras, sin E/S
     application/                Casos de uso (un servicio por responsabilidad)
     http/                       Rutas delgadas: validan → llaman al caso de uso → responden
@@ -206,6 +228,7 @@ Las fotos iniciales son de **Unsplash** bajo la [Unsplash License](https://unspl
 - Realtime con navegadores reales: un visitante anónimo ve el cambio de stock y un cliente ve el cambio de estado de su pedido sin recargar (≈ 0,3 s); al cerrar una sesión desde «Accesos», la persona sale al instante.
 - Alertas con operador, auditor y cliente conectados a la vez: cada rol recibe solo las suyas (pago, stock bajo, acceso denegado, nuevo inicio de sesión y bloqueo por fuerza bruta).
 - Acceso directo con la clave anónima a tablas y RPC de PostgREST: rechazado.
+- Laboratorio completo desde el navegador: las 17 pruebas reportan a `POST /api/lab/runs` (17 × `200`) y quedan en la bitácora; una clave fuera de la lista blanca se rechaza con `400`.
 - Subida real de imágenes a InsForge Storage.
 - Revisión visual en escritorio y móvil.
 

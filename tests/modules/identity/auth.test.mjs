@@ -88,3 +88,24 @@ test("sesion vencida por inactividad segun la politica", async () => {
   await c.repos.sessions.touch(ctx.session.keyHash, longAgo);
   assert.equal(await c.services.sessions.resolve(ctx.token), null);
 });
+
+test("la bitacora dice QUIEN entro, no «anonimo»", async () => {
+  const c = await newContainer();
+  await c.services.auth.login(anonCtx(), { email: DEMO.auditor[0], password: DEMO.auditor[1] });
+  const [entrada] = (await c.services.audit.list()).filter((e) => e.action === "auth.login" && e.outcome === "ok");
+
+  assert.ok(entrada.actor, "un inicio de sesion correcto se atribuye a la cuenta");
+  assert.equal(entrada.actor.role, "auditor");
+  assert.match(entrada.actor.email, /^a\*+@tienda\.test$/, "el correo va enmascarado");
+  assert.match(entrada.target, /^user:/, "el objetivo usa el mismo formato que el resto de la bitacora");
+});
+
+test("un intento fallido NO se atribuye a ninguna cuenta", async () => {
+  const c = await newContainer();
+  await assert.rejects(c.services.auth.login(anonCtx(), { email: DEMO.cliente[0], password: "incorrecta-123" }), UnauthenticatedError);
+  const [fallo] = (await c.services.audit.list()).filter((e) => e.action === "auth.login" && e.outcome === "failure");
+
+  // Nadie demostro ser esa persona: la bitacora no puede afirmar que lo fue
+  assert.equal(fallo.actor, null);
+  assert.match(fallo.details.email, /^c\*+@tienda\.test$/, "la cuenta intentada se nombra en el detalle, enmascarada");
+});

@@ -52,9 +52,17 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
       // Mensaje generico: no confirma que el correo ya este registrado
       throw new ValidationError("No fue posible completar el registro con esos datos");
     }
-    await audit.record(ctx, "auth.register", { target: user.id });
+    await audit.record(as(ctx, user), "auth.register", { target: `user:${user.id}` });
     return startSession(ctx, user);
   }
+
+  /**
+   * Contexto para auditar un evento de autenticacion ya verificado.
+   * Durante el login todavia no hay sesion, asi que ctx.user viene vacio y la bitacora diria
+   * "anonimo" justo en el evento que mas interesa: quien entro. Una vez comprobada la identidad
+   * (contrasena y, si aplica, segundo factor), el registro se atribuye a esa cuenta.
+   */
+  const as = (ctx, user) => ({ ...ctx, user });
 
   /** Deja constancia del bloqueo una sola vez: en el fallo que alcanza el limite de la politica. */
   async function recordLockoutIfReached(ctx, { user, email, policy: current, failuresHere, failuresAnywhere }) {
@@ -91,11 +99,11 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
     if (user.mfa?.enabled) {
       const mfaToken = randomToken();
       await mfaChallenges.create({ tokenHash: sha256(mfaToken), userId: user.id, expiresAt: new Date(Date.now() + MFA_CHALLENGE_MS).toISOString() });
-      await audit.record(ctx, "auth.login.mfa_challenge", { target: user.id });
+      await audit.record(ctx, "auth.login.mfa_challenge", { target: `user:${user.id}`, details: { email: maskEmail(user.email) } });
       return { mfaRequired: true, mfaToken };
     }
     const result = await startSession(ctx, user);
-    await audit.record(ctx, "auth.login", { target: user.id });
+    await audit.record(as(ctx, user), "auth.login", { target: `user:${user.id}` });
     return result;
   }
 
@@ -110,23 +118,23 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
     }
     const user = await users.findById(challenge.userId);
     if (!user?.active || !(await consumeTotp(user, code))) {
-      await audit.record(ctx, "auth.mfa", { outcome: "failure", target: challenge.userId });
+      await audit.record(ctx, "auth.mfa", { outcome: "failure", target: `user:${challenge.userId}`, details: user ? { email: maskEmail(user.email) } : null });
       throw new UnauthenticatedError("Código incorrecto");
     }
     await mfaChallenges.delete(tokenHash);
     const result = await startSession(ctx, user);
-    await audit.record(ctx, "auth.login", { target: user.id, details: { mfa: true } });
+    await audit.record(as(ctx, user), "auth.login", { target: `user:${user.id}`, details: { mfa: true } });
     return result;
   }
 
   async function logout(ctx) {
-    await audit.record(ctx, "auth.logout", { target: ctx.user.id });
+    await audit.record(ctx, "auth.logout", { target: `user:${ctx.user.id}` });
     await sessions.close(ctx.session);
   }
 
   async function logoutAll(ctx) {
     const revoked = await sessions.revokeUser(ctx.user.id, { reason: "logout_all" });
-    await audit.record(ctx, "auth.logout_all", { target: ctx.user.id, details: { sesiones: revoked } });
+    await audit.record(ctx, "auth.logout_all", { target: `user:${ctx.user.id}`, details: { sesiones: revoked } });
     return revoked;
   }
 
@@ -142,7 +150,7 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
     // Cambiar la contrasena cierra todas las sesiones y abre una nueva para este dispositivo
     await sessions.revokeUser(user.id, { exceptKeyHash: ctx.session.keyHash, reason: "password_changed" });
     const result = await startSession(ctx, user);
-    await audit.record(ctx, "auth.password_change", { target: user.id });
+    await audit.record(ctx, "auth.password_change", { target: `user:${user.id}` });
     return result;
   }
 
@@ -160,7 +168,7 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
     const fresh = await users.findById(ctx.user.id);
     await users.update(ctx.user.id, { mfa: { enabled: true, secret: fresh.mfa.pendingSecret, pendingSecret: null, lastCounter: fresh.mfa.lastCounter } });
     await sessions.revokeUser(ctx.user.id, { exceptKeyHash: ctx.session.keyHash, reason: "mfa_enabled" });
-    await audit.record(ctx, "auth.mfa_enabled", { target: ctx.user.id });
+    await audit.record(ctx, "auth.mfa_enabled", { target: `user:${ctx.user.id}` });
   }
 
   async function disableMfa(ctx, body) {
@@ -170,7 +178,7 @@ export function createAuthService({ users, mfaChallenges, sessions, rateLimiter,
       throw new ValidationError("Contraseña o código incorrectos");
     }
     await users.update(ctx.user.id, { mfa: { enabled: false, secret: null, pendingSecret: null, lastCounter: null } });
-    await audit.record(ctx, "auth.mfa_disabled", { target: ctx.user.id });
+    await audit.record(ctx, "auth.mfa_disabled", { target: `user:${ctx.user.id}` });
   }
 
   /** Estado de la sesion actual para el frontend. */

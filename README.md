@@ -127,7 +127,7 @@ Tarjetas de prueba: `4242 4242 4242 4242` (aprobada) y `4000 0000 0000 0002` (re
   - **Pedidos** con máquina de estados.
   - **Clientes** (solo lectura; abrir el detalle queda auditado).
   - **Reseñas**: ocultar y restaurar (no se borran).
-  - **Usuarios** y roles.
+  - **Usuarios**: roles, activar o desactivar cuentas y restablecer la contraseña (temporal de un solo uso, que cierra las sesiones y obliga a cambiarla al entrar).
   - **Accesos**: sesiones activas con cierre remoto, intentos fallidos y desbloqueo, cuentas (contraseña temporal de un solo uso y reinicio de MFA) y política de acceso editable dentro de rangos seguros.
   - **Auditoría** con verificación HMAC de cada registro.
 - **Alertas en vivo por rol** (campana con contador, historial de la sesión y avisos emergentes; ver la tabla siguiente).
@@ -234,7 +234,7 @@ Las fotos iniciales son de **Unsplash** bajo la [Unsplash License](https://unspl
 
 ## Limitaciones conocidas
 
-- **Sin recuperación de contraseña por correo** ni verificación de correo: el envío propio requiere plan de pago de InsForge. La recuperación la hace un administrador desde Accesos → Cuentas con una contraseña temporal de un solo uso.
+- **Sin recuperación de contraseña por correo** ni verificación de correo: el envío propio requiere plan de pago de InsForge. La recuperación la hace un administrador con una contraseña temporal de un solo uso, desde Usuarios o desde Accesos → Cuentas.
 - **Revocación en realtime diferida:** un WebSocket ya suscrito no se expulsa por sí solo, pero recibe el aviso `session.revoked` (la página cierra la sesión) y la API rechaza la sesión de inmediato. Los avisos solo son señales, así que no exponen datos.
 - Las migraciones SQL y la RLS de los canales son propias del adaptador InsForge/PostgreSQL. Otra base de datos necesita su propio esquema (ver *Cómo cambiar de base de datos*).
 - La pasarela es una simulación: no consulta el estado al proveedor (T09 lo plantea como control adicional).

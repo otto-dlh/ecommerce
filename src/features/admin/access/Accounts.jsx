@@ -5,27 +5,7 @@ import { useAuth } from "../../auth/index.js";
 import { useApi, useAction } from "../../../shared/hooks/useApi.js";
 import { useLiveRefresh } from "../../../shared/realtime/RealtimeProvider.jsx";
 import { ErrorAlert, Loading } from "../ui.jsx";
-import "./accounts.css";
-
-/** Muestra la contraseña temporal una sola vez, con opción de copiarla. */
-function TemporaryPassword({ account, password, onClose }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(password);
-    setCopied(true);
-  };
-  return (
-    <div className="alert ok temp-password" role="status">
-      <p>Contraseña temporal de <b>{account}</b> (se muestra solo esta vez; compártela por un canal seguro):</p>
-      <div className="row">
-        <code>{password}</code>
-        <button className="btn sm" onClick={copy}>{copied ? "✓ Copiada" : "Copiar"}</button>
-        <button className="btn ghost sm" onClick={onClose}>Listo</button>
-      </div>
-      <p className="muted small">Al ingresar con ella, el sistema le pedirá elegir una contraseña nueva.</p>
-    </div>
-  );
-}
+import { TemporaryPassword } from "../TemporaryPassword.jsx";
 
 function AccountActions({ account, run, onTemporary }) {
   const forcePassword = async () => {
